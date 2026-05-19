@@ -3,73 +3,70 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>🌟 AR Vesak City - Real Background</title>
+  <title>🌟 Optimized AR Vesak City</title>
   <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
   <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
   <style>
-    body { margin: 0; overflow: hidden; }
+    body { margin: 0; overflow: hidden; background: transparent; }
     .ui {
       position: absolute; top: 10px; left: 10px; color: #ffddaa; 
-      background: rgba(0,0,0,0.5); padding: 12px 18px; border-radius: 10px; 
-      z-index: 1000; font-family: Arial, sans-serif;
+      background: rgba(0,0,0,0.5); padding: 10px 15px; border-radius: 8px; 
+      z-index: 1000; font-family: Arial; font-size: 14px;
     }
   </style>
 </head>
 <body>
 
   <div class="ui">
-    <h2>🌕 AR Vesak City</h2>
-    <p>Real Camera • Move forward to reveal decorations</p>
+    <h2>🌕 Optimized Vesak City</h2>
+    <p>Real Camera • Move slowly</p>
   </div>
 
   <a-scene 
     embedded 
-    arjs="sourceType: webcam; trackingMethod: best; debugUI: false;"
-    webxr="requiredFeatures: hit-test; optionalFeatures: local-floor;"
-    background="color: #000000"
-    fog="type: linear; color: #000000; near: 15; far: 40">
+    renderer="alpha: true; antialias: true; precision: mediump;"
+    arjs="sourceType: webcam; videoTexture: true; debugUIEnabled: false; trackingMethod: best;"
+    background="color: transparent"
+    stats="true">   <!-- Remove stats="true" in production -->
 
-    <!-- Real Camera Feed -->
-    <a-camera arjs-camera="active: true"></a-camera>
+    <a-camera></a-camera>
 
-    <!-- Soft realistic lighting (blends with real world) -->
-    <a-light type="ambient" intensity="0.6" color="#ffffff"></a-light>
-    <a-light type="directional" position="5 10 8" intensity="1.2" color="#ffeedd"></a-light>
+    <!-- Optimized Lighting -->
+    <a-light type="ambient" intensity="0.75" color="#ffffff"></a-light>
+    <a-light type="directional" position="5 10 5" intensity="0.9" color="#ffeedd"></a-light>
 
-    <!-- Ground (semi-transparent so real floor shows) -->
-    <a-plane rotation="-90 0 0" width="60" height="60" color="#112211" opacity="0.25" shadow="receive:true"></a-plane>
+    <!-- Minimal ground -->
+    <a-plane rotation="-90 0 0" width="60" height="60" color="#112211" opacity="0.1"></a-plane>
 
-    <!-- ====================== VESAK CITY ====================== -->
+    <!-- Temple (Main heavy model) -->
+    <a-entity id="temple" 
+              gltf-model="YOUR_TEMPLE.glb" 
+              scale="5 5 5" position="0 0 -8" visible="false"></a-entity>
 
-    <!-- Temple -->
-    <a-entity id="temple" gltf-model="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/Duck/glTF-Binary/Duck.glb" 
-              scale="7 7 7" position="0 0 -8" visible="false"></a-entity>
+    <!-- Buddha -->
+    <a-entity id="buddha" 
+              gltf-model="YOUR_BUDDHA.glb" 
+              scale="1.4 1.4 1.4" position="0 1 -13" rotation="0 180 0" visible="false"></a-entity>
 
-    <!-- Buddha Statue -->
-    <a-entity id="buddha" gltf-model="https://assets.babylonjs.com/meshes/BoomBox.glb" 
-              scale="1.6 1.6 1.6" position="0 1.2 -13" rotation="0 180 0" visible="false"></a-entity>
+    <!-- Thorana -->
+    <a-entity id="thorana" 
+              gltf-model="YOUR_THORANA.glb" 
+              scale="2.5 2.5 2.5" position="0 3.5 -20" visible="false"></a-entity>
 
-    <!-- Thorana (Main Arch) -->
-    <a-entity id="thorana" gltf-model="YOUR_THORANA_GLB_URL.glb" 
-              scale="3 3 3" position="0 4 -20" rotation="0 0 0" visible="false"></a-entity>
+    <!-- Reused Lantern (better performance) -->
+    <a-entity class="lantern" 
+              gltf-model="YOUR_LANTERN.glb" 
+              scale="1.4 1.4 1.4" position="-4 1.8 -7" 
+              animation="property: rotation; to: 0 360 0; dur: 16000; loop: true;" visible="false"></a-entity>
 
-    <!-- Vesak Lanterns -->
-    <a-entity class="lantern" gltf-model="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/Lantern/glTF-Binary/Lantern.glb" 
-              scale="1.6 1.6 1.6" position="-4 2 -7" animation="property: rotation; to: 0 360 0; dur: 14000; loop: true;" visible="false"></a-entity>
+    <a-entity class="lantern" 
+              gltf-model="YOUR_LANTERN.glb" 
+              scale="1.3 1.3 1.3" position="4 1.9 -9" 
+              animation="property: rotation; to: 0 360 0; dur: 18000; loop: true;" visible="false"></a-entity>
 
-    <a-entity class="lantern" gltf-model="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/Lantern/glTF-Binary/Lantern.glb" 
-              scale="1.5 1.5 1.5" position="4 2.1 -9" animation="property: rotation; to: 0 360 0; dur: 16000; loop: true;" visible="false"></a-entity>
-
-    <!-- Flying Lanterns -->
-    <a-entity class="flying" gltf-model="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/Lantern/glTF-Binary/Lantern.glb" 
-              scale="0.9 0.9 0.9" position="-3 3 -18" visible="false"></a-entity>
-
-    <!-- Lotus Flowers -->
-    <a-entity gltf-model="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/Lantern/glTF-Binary/Lantern.glb" 
-              scale="1.2 1.2 1.2" position="5 0.5 -16" visible="false"></a-entity>
-
-    <!-- Fireflies / Light Particles -->
-    <a-entity position="0 4 -10" particle-system="preset: dust; color: #ffdd77,#ffeeaa; particleCount: 600; size: 0.05"></a-entity>
+    <!-- Optimized Particles (Fireflies) -->
+    <a-entity position="0 4 -10" 
+              particle-system="preset: dust; color: #ffdd77; particleCount: 250; size: 0.04; velocity: 0.1 0.2 0.1"></a-entity>
 
   </a-scene>
 
@@ -77,42 +74,40 @@
     const scene = document.querySelector('a-scene');
     const camera = document.querySelector('a-camera');
 
-    // Progressive Reveal based on camera movement (real background remains clear)
-    function revealCity() {
+    let lastCheck = 0;
+
+    function revealModels() {
+      const now = Date.now();
+      if (now - lastCheck < 300) return; // Throttle to 300ms
+      lastCheck = now;
+
       const z = camera.object3D.position.z;
-      
-      if (z < -5) document.getElementById('temple').setAttribute('visible', 'true');
-      if (z < -10) document.getElementById('buddha').setAttribute('visible', 'true');
-      if (z < -15) {
-        document.getElementById('thorana').setAttribute('visible', 'true');
-        document.querySelectorAll('.lantern').forEach(el => el.setAttribute('visible', 'true'));
-      }
-      if (z < -20) {
-        document.querySelectorAll('.flying').forEach(el => {
-          el.setAttribute('visible', 'true');
-          el.setAttribute('animation', 'property: position; to: 0 12 -18; dur: 25000; loop: false');
-        });
+
+      if (z < -5) document.getElementById('temple').setAttribute('visible', true);
+      if (z < -11) document.getElementById('buddha').setAttribute('visible', true);
+      if (z < -17) {
+        document.getElementById('thorana').setAttribute('visible', true);
+        document.querySelectorAll('.lantern').forEach(l => l.setAttribute('visible', true));
       }
     }
 
     scene.addEventListener('loaded', () => {
-      setInterval(revealCity, 250);
+      setInterval(revealModels, 100);
     });
 
-    // Tap to place extra lantern anywhere on real surface
+    // Tap to place extra lantern (optimized)
     scene.addEventListener('click', () => {
       const lantern = document.createElement('a-entity');
-      lantern.setAttribute('gltf-model', 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/Lantern/glTF-Binary/Lantern.glb');
-      lantern.setAttribute('scale', '1.4 1.4 1.4');
-      lantern.setAttribute('animation', 'property: rotation; to: 0 360 0; dur: 12000; loop: true');
+      lantern.setAttribute('gltf-model', 'YOUR_LANTERN.glb');
+      lantern.setAttribute('scale', '1.2 1.2 1.2');
+      lantern.setAttribute('animation', 'property: rotation; to: 0 360 0; dur: 14000; loop: true');
       scene.appendChild(lantern);
     });
   </script>
 
-  <!-- Start AR Button -->
   <button onclick="document.querySelector('a-scene').enterVR()" 
-          style="position:fixed; bottom:30px; left:30px; z-index:10000; padding:15px 25px; font-size:17px; background:#ffcc00; color:black; border:none; border-radius:10px;">
-    📱 Start AR with Real Camera
+          style="position:fixed; bottom:25px; left:25px; z-index:10000; padding:14px 22px; font-size:16px; background:#ffcc00; color:black; border:none; border-radius:10px;">
+    📱 Start Optimized AR
   </button>
 </body>
 </html>
