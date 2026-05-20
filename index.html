@@ -3,101 +3,102 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>🌟 My Vesak City</title>
+  <title>🌟 Advanced Vesak City - WebXR</title>
   <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
-  <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
   <style>
-    body { margin: 0; overflow: hidden; }
+    body { margin: 0; overflow: hidden; background: #000; }
     .ui {
       position: absolute; top: 10px; left: 10px; color: #ffddaa; 
       background: rgba(0,0,0,0.7); padding: 15px; border-radius: 12px; z-index: 1000;
+    }
+    button {
+      position: fixed; bottom: 20px; left: 20px; z-index: 10000;
+      padding: 15px 28px; font-size: 18px; background: #ffcc00; color: black;
+      border: none; border-radius: 12px;
     }
   </style>
 </head>
 <body>
 
   <div class="ui">
-    <h2>🌕 My Vesak City</h2>
-    <p id="status">Getting GPS Location...</p>
+    <h2>🌕 Advanced Vesak City</h2>
+    <p>Walk forward between lotus path • Tap to add lanterns</p>
   </div>
 
-  <a-scene 
-    embedded 
-    arjs="sourceType: webcam; videoTexture: true; debugUIEnabled: false;"
-    renderer="alpha: true; antialias: true;"
-    background="color: transparent">
+  <a-scene background="color: #0a001f" xr-mode-ui="enabled: true">
 
-    <a-camera gps-new-camera="gpsMinDistance: 8; positionMinAccuracy: 20"></a-camera>
+    <a-camera></a-camera>
 
-    <!-- Temple -->
-    <a-entity 
-      gltf-model="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/Duck/glTF-Binary/Duck.glb"
-      gps-new-entity-place="latitude: 6.98166; longitude: 81.07729"
-      scale="8 8 8" position="0 0 0" rotation="0 30 0"></a-entity>
+    <!-- Lighting -->
+    <a-light type="ambient" intensity="0.45" color="#445577"></a-light>
+    <a-light type="directional" position="5 15 10" intensity="0.9" color="#ffddbb"></a-light>
 
-    <!-- Buddha Statue -->
-    <a-entity 
-      gltf-model="https://assets.babylonjs.com/meshes/BoomBox.glb"
-      gps-new-entity-place="latitude: 6.98166; longitude: 81.07729"
-      scale="2.2 2.2 2.2" position="5 2 -12" rotation="0 180 0"></a-entity>
+    <!-- Ground -->
+    <a-plane rotation="-90 0 0" width="100" height="100" color="#001a00" opacity="0.35"></a-plane>
 
-    <!-- Thorana -->
-    <a-entity 
-      gltf-model="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/Lantern/glTF-Binary/Lantern.glb"
-      gps-new-entity-place="latitude: 6.98166; longitude: 81.07729"
-      scale="4 4 4" position="-8 6 -24"></a-entity>
+    <!-- ====================== LOTUS PATH ====================== -->
+    <!-- Left Side Lotus Path -->
+    <a-entity position="-4 0.2 -8" gltf-model="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/Lantern/glTF-Binary/Lantern.glb" scale="1.2 1.2 1.2"></a-entity>
+    <a-entity position="-4 0.2 -14" gltf-model="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/Lantern/glTF-Binary/Lantern.glb" scale="1.2 1.2 1.2"></a-entity>
+    <a-entity position="-4 0.2 -20" gltf-model="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/Lantern/glTF-Binary/Lantern.glb" scale="1.2 1.2 1.2"></a-entity>
+    <a-entity position="-4 0.2 -26" gltf-model="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/Lantern/glTF-Binary/Lantern.glb" scale="1.2 1.2 1.2"></a-entity>
 
-    <!-- Vesak Lanterns -->
-    <a-entity class="lantern" 
-      gltf-model="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/Lantern/glTF-Binary/Lantern.glb"
-      gps-new-entity-place="latitude: 6.98166; longitude: 81.07729"
-      scale="1.8 1.8 1.8" position="-10 2 -14"
-      animation="property: rotation; to: 0 360 0; dur: 16000; loop: true;"></a-entity>
+    <!-- Right Side Lotus Path -->
+    <a-entity position="4 0.2 -8" gltf-model="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/Lantern/glTF-Binary/Lantern.glb" scale="1.2 1.2 1.2"></a-entity>
+    <a-entity position="4 0.2 -14" gltf-model="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/Lantern/glTF-Binary/Lantern.glb" scale="1.2 1.2 1.2"></a-entity>
+    <a-entity position="4 0.2 -20" gltf-model="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/Lantern/glTF-Binary/Lantern.glb" scale="1.2 1.2 1.2"></a-entity>
+    <a-entity position="4 0.2 -26" gltf-model="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/Lantern/glTF-Binary/Lantern.glb" scale="1.2 1.2 1.2"></a-entity>
 
-    <a-entity class="lantern" 
-      gltf-model="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/Lantern/glTF-Binary/Lantern.glb"
-      gps-new-entity-place="latitude: 6.98166; longitude: 81.07729"
-      scale="1.7 1.7 1.7" position="9 2.2 -16"
-      animation="property: rotation; to: 0 360 0; dur: 18000; loop: true;"></a-entity>
+    <!-- ====================== MAIN ELEMENTS ====================== -->
 
-    <!-- Flying Lanterns -->
-    <a-entity 
-      gltf-model="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/Lantern/glTF-Binary/Lantern.glb"
-      gps-new-entity-place="latitude: 6.98166; longitude: 81.07729"
-      scale="1 1 1" position="-5 4 -20"
-      animation="property: position; to: -5 15 -20; dur: 35000; loop: false;"></a-entity>
+    <!-- Temple - Right Side -->
+    <a-entity gltf-model="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/Duck/glTF-Binary/Duck.glb"
+              scale="10 10 10" position="12 0 -22" rotation="0 45 0"></a-entity>
+
+    <!-- Buddha Statue - Left Side -->
+    <a-entity gltf-model="https://assets.babylonjs.com/meshes/BoomBox.glb"
+              scale="2.5 2.5 2.5" position="-12 2 -20" rotation="0 200 0"></a-entity>
+
+    <!-- Vesak Lanterns along the path -->
+    <a-entity class="lantern" gltf-model="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/Lantern/glTF-Binary/Lantern.glb"
+              scale="1.8 1.8 1.8" position="-2 2 -10" animation="property: rotation; to: 0 360 0; dur: 14000; loop: true;"></a-entity>
+    
+    <a-entity class="lantern" gltf-model="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/Lantern/glTF-Binary/Lantern.glb"
+              scale="1.7 1.7 1.7" position="3 2 -15" animation="property: rotation; to: 0 360 0; dur: 16000; loop: true;"></a-entity>
+
+    <a-entity class="lantern" gltf-model="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/Lantern/glTF-Binary/Lantern.glb"
+              scale="1.8 1.8 1.8" position="-2.5 2 -23" animation="property: rotation; to: 0 360 0; dur: 13000; loop: true;"></a-entity>
+
+    <!-- Flying Vesak Lanterns -->
+    <a-entity gltf-model="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/Lantern/glTF-Binary/Lantern.glb"
+              scale="1.1 1.1 1.1" position="-6 3 -18"
+              animation="property: position; to: -8 25 -25; dur: 28000; loop: false;"></a-entity>
+
+    <a-entity gltf-model="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/Lantern/glTF-Binary/Lantern.glb"
+              scale="0.9 0.9 0.9" position="5 4 -22"
+              animation="property: position; to: 7 28 -30; dur: 32000; loop: false;"></a-entity>
 
     <!-- Fireflies -->
-    <a-entity 
-      gps-new-entity-place="latitude: 6.98166; longitude: 81.07729"
-      position="0 6 -12" 
-      particle-system="preset: dust; color: #ffdd77,#ffeeaa; particleCount: 400"></a-entity>
+    <a-entity position="0 6 -15" particle-system="preset: dust; color: #ffdd77,#ffeeaa; particleCount: 500; size: 0.06"></a-entity>
 
   </a-scene>
 
-  <script>
-    navigator.geolocation.watchPosition((pos) => {
-      const distance = calculateDistance(pos.coords.latitude, pos.coords.longitude, 6.98166, 81.07729);
-      document.getElementById('status').innerHTML = `
-        GPS Active ✅<br>
-        Accuracy: ${pos.coords.accuracy.toFixed(1)}m<br>
-        Distance: ${distance.toFixed(0)}m from target
-      `;
-    }, (err) => {
-      document.getElementById('status').innerHTML = "❌ Allow Location Permission";
-    });
+  <button onclick="startAR()">📱 Start Advanced Vesak City</button>
 
-    // Distance calculation function
-    function calculateDistance(lat1, lon1, lat2, lon2) {
-      const R = 6371000; // Earth radius in meters
-      const dLat = (lat2 - lat1) * Math.PI / 180;
-      const dLon = (lon2 - lon1) * Math.PI / 180;
-      const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-                Math.sin(dLon/2) * Math.sin(dLon/2);
-      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-      return R * c;
+  <script>
+    function startAR() {
+      const scene = document.querySelector('a-scene');
+      scene.enterVR('immersive-ar');
     }
+
+    // Tap screen to place extra lantern
+    document.querySelector('a-scene').addEventListener('click', () => {
+      const lantern = document.createElement('a-entity');
+      lantern.setAttribute('gltf-model', 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/Lantern/glTF-Binary/Lantern.glb');
+      lantern.setAttribute('scale', '1.6 1.6 1.6');
+      lantern.setAttribute('animation', 'property: rotation; to: 0 360 0; dur: 14000; loop: true');
+      document.querySelector('a-scene').appendChild(lantern);
+    });
   </script>
 </body>
 </html>
