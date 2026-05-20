@@ -3,116 +3,137 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Vesak AR City — Real Camera</title>
+<title>Vesak AR City - Fixed</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { background: #0a0a14; font-family: 'Georgia', serif; overflow: hidden; }
-  #canvas { display: block; width: 100vw; height: 100vh; }
-  /* Keep all your original CSS */
-  #ui, #legend, #controls, #loading, #info-toast { /* your styles */ }
+  body { margin:0; overflow:hidden; background:#000; }
+  #ui {
+    position: fixed; top: 10px; left: 10px; color: #ffddaa; background: rgba(0,0,0,0.7);
+    padding: 15px; border-radius: 12px; z-index: 100; font-family: Arial;
+  }
+  button {
+    position: fixed; bottom: 30px; left: 30px; padding: 16px 28px;
+    font-size: 18px; background: #ffcc00; color: black; border: none;
+    border-radius: 12px; z-index: 1000;
+  }
 </style>
 </head>
 <body>
 
-<!-- Your original HTML remains the same -->
-<div id="loading">...</div>
-<canvas id="canvas"></canvas>
-<div id="ui">...</div>
-<div id="legend">...</div>
-<div id="controls">
-  <!-- ... your buttons ... -->
-  <button class="btn xr-btn" id="xr-btn">📱 Start AR Camera</button>
+<div id="ui">
+  <h2>🌟 Vesak AR City</h2>
+  <p id="status">Press Start AR</p>
 </div>
-<div id="info-toast"></div>
+
+<button onclick="startAR()">📱 Start AR Camera</button>
 
 <script>
-// ─── SCENE SETUP (Your code) ─────────────────────────────────────────────
-const renderer = new THREE.WebGLRenderer({ 
-  canvas: document.getElementById('canvas'), 
-  antialias: true, 
-  alpha: true 
-});
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-renderer.shadowMap.enabled = true;
-renderer.xr.enabled = true;           // ← Important for AR
-
+// Basic Three.js Setup
 const scene = new THREE.Scene();
-scene.fog = new THREE.FogExp2(0x0a0a1f, 0.018);
+const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 200);
+camera.position.set(0, 1.6, 5);
 
-const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 300);
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.xr.enabled = true;
+document.body.appendChild(renderer.domElement);
 
-// [Keep all your buildSky(), buildGround(), buildLotus(), buildTemple(), buildBuddha(), etc. functions exactly as they are]
+// Lighting
+scene.add(new THREE.AmbientLight(0xffffff, 0.8));
+const sun = new THREE.DirectionalLight(0xffeedd, 1.2);
+sun.position.set(10, 20, 10);
+scene.add(sun);
 
-// ... (All your scene building code - lotus, lanterns, temple, buddha, sky lanterns, etc.) ...
+// Ground
+const ground = new THREE.Mesh(
+  new THREE.PlaneGeometry(100, 100),
+  new THREE.MeshStandardMaterial({ color: 0x112211 })
+);
+ground.rotation.x = -Math.PI / 2;
+scene.add(ground);
 
-// ─── WEBXR AR SUPPORT ─────────────────────────────────────────────────────
+// === VISIBLE OBJECTS ===
+function createLantern(x, z) {
+  const group = new THREE.Group();
+  
+  // Lantern body
+  const lantern = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.6, 0.5, 1.2, 8),
+    new THREE.MeshStandardMaterial({ color: 0xff5500, emissive: 0xff2200, emissiveIntensity: 1.5 })
+  );
+  group.add(lantern);
+  
+  // Glow
+  const glow = new THREE.Mesh(
+    new THREE.SphereGeometry(0.4, 16, 16),
+    new THREE.MeshStandardMaterial({ color: 0xffdd88, emissive: 0xffaa00, emissiveIntensity: 3 })
+  );
+  group.add(glow);
+  
+  group.position.set(x, 1, z);
+  return group;
+}
+
+// Create visible objects
+scene.add(createLantern(-3, -8));
+scene.add(createLantern(3, -8));
+scene.add(createLantern(0, -15));
+
+// Temple (Big box for now)
+const temple = new THREE.Mesh(
+  new THREE.BoxGeometry(10, 8, 10),
+  new THREE.MeshStandardMaterial({ color: 0xd4b896 })
+);
+temple.position.set(12, 4, -25);
+scene.add(temple);
+
+// Buddha
+const buddha = new THREE.Mesh(
+  new THREE.SphereGeometry(3, 16, 16),
+  new THREE.MeshStandardMaterial({ color: 0xffd700 })
+);
+buddha.position.set(-12, 3, -22);
+scene.add(buddha);
+
+// Animation Loop
+renderer.setAnimationLoop(() => {
+  renderer.render(scene, camera);
+});
+
+// === START AR ===
 async function startAR() {
-  if (!('xr' in navigator)) {
-    showToast("WebXR not supported on this device");
+  document.getElementById('status').innerHTML = "Starting AR...";
+  
+  if (!navigator.xr) {
+    alert("WebXR not supported on this browser");
     return;
   }
 
   try {
-    const supported = await navigator.xr.isSessionSupported('immersive-ar');
-    if (!supported) {
-      showToast("AR not supported on this device");
-      return;
-    }
-
     const session = await navigator.xr.requestSession('immersive-ar', {
-      requiredFeatures: ['hit-test'],
-      optionalFeatures: ['dom-overlay'],
-      domOverlay: { root: document.getElementById('controls') }
+      requiredFeatures: ['hit-test']
     });
 
-    renderer.xr.setSession(session);
-    showToast('🪷 AR Camera Activated! Tap on floor to place lanterns.');
+    await renderer.xr.setSession(session);
+    document.getElementById('status').innerHTML = "✅ AR Active!<br>Tap on floor to place lanterns";
 
-    document.getElementById('mode-label').textContent = '● AR Active';
-
-  } catch (err) {
-    console.error(err);
-    showToast('Failed to start AR: ' + err.message);
+  } catch (e) {
+    console.error(e);
+    alert("AR Error: " + e.message);
   }
 }
 
-// Add extra lantern when tapping in AR
+// Tap to place lantern in AR
 renderer.xr.addEventListener('sessionstart', () => {
   const session = renderer.xr.getSession();
   session.addEventListener('select', () => {
-    const lantern = createSimpleLantern();
+    const lantern = createLantern(0, -5);
     scene.add(lantern);
-    showToast('Vesak Lantern Placed ✨');
   });
 });
 
-function createSimpleLantern() {
-  const group = new THREE.Group();
-  const geo = new THREE.SphereGeometry(0.6, 16, 16);
-  const mat = new THREE.MeshStandardMaterial({
-    color: 0xffaa33,
-    emissive: 0xff5500,
-    emissiveIntensity: 2.5
-  });
-  const mesh = new THREE.Mesh(geo, mat);
-  group.add(mesh);
-
-  const light = new THREE.PointLight(0xffaa33, 3, 10);
-  group.add(light);
-  return group;
-}
-
-// Connect button
-document.getElementById('xr-btn').addEventListener('click', startAR);
-
-// Keep your original animate function
-renderer.setAnimationLoop((time, frame) => {
-  // Your original animation logic
-  animate(time);
-});
-
-// Resize handler
+// Resize
 window.addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
