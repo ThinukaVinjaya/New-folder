@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>🌟 Vesak City - WebXR</title>
+  <title>🌟 My Vesak City - WebXR</title>
   <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
   <style>
     body { margin: 0; overflow: hidden; background: #000; }
@@ -12,69 +12,91 @@
       background: rgba(0,0,0,0.7); padding: 15px; border-radius: 12px; 
       z-index: 1000; font-family: Arial;
     }
+    .controls {
+      position: fixed; bottom: 20px; left: 20px; z-index: 10000;
+    }
     button {
-      position: fixed; bottom: 30px; left: 30px; z-index: 10000;
-      padding: 16px 28px; font-size: 18px; background: #ffcc00; 
-      color: black; border: none; border-radius: 12px;
+      padding: 14px 24px; margin: 5px; font-size: 17px; border: none; 
+      border-radius: 12px; background: #ffcc00; color: black;
     }
   </style>
 </head>
 <body>
 
   <div class="ui">
-    <h2>🌕 AR Vesak City (WebXR)</h2>
-    <p>Tap "Start WebXR" → Point at floor → Tap to place objects</p>
+    <h2>🌕 My AR Vesak City</h2>
+    <p>Point at floor → Tap to place more lanterns</p>
   </div>
 
   <a-scene 
-    background="color: #000011"
+    background="color: #0a001f"
     xr-mode-ui="enabled: true">
 
     <a-camera></a-camera>
 
-    <!-- Soft lighting -->
-    <a-light type="ambient" intensity="0.8"></a-light>
-    <a-light type="directional" position="5 10 5" intensity="1.0" color="#ffeedd"></a-light>
+    <!-- Realistic Night Lighting -->
+    <a-light type="ambient" intensity="0.45" color="#445577"></a-light>
+    <a-light type="directional" position="5 12 8" intensity="0.9" color="#ffddbb"></a-light>
 
     <!-- Ground -->
-    <a-plane rotation="-90 0 0" width="100" height="100" color="#001100" opacity="0.2"></a-plane>
+    <a-plane rotation="-90 0 0" width="100" height="100" color="#001a00" opacity="0.25"></a-plane>
 
-    <!-- Test Objects (Big & Close) -->
-    <a-box id="testbox" position="0 0.6 -3" color="#ff0000" height="1.2" width="1.2" depth="1.2" visible="true"></a-box>
-    
-    <a-sphere position="2 1 -4" radius="0.8" color="#00ff88" visible="true"></a-sphere>
+    <!-- Main Temple -->
+    <a-entity gltf-model="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/Duck/glTF-Binary/Duck.glb" 
+              scale="7 7 7" position="0 0 -8" rotation="0 45 0"></a-entity>
 
-    <!-- Vesak Lantern -->
+    <!-- Buddha Statue -->
+    <a-entity gltf-model="https://assets.babylonjs.com/meshes/BoomBox.glb" 
+              scale="2 2 2" position="0 1.5 -12" rotation="0 180 0"></a-entity>
+
+    <!-- Thorana (Big Arch) -->
     <a-entity gltf-model="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/Lantern/glTF-Binary/Lantern.glb" 
-              scale="1.8 1.8 1.8" position="-2 1 -5" 
-              animation="property: rotation; to: 0 360 0; dur: 12000; loop: true;"></a-entity>
+              scale="3.5 3.5 3.5" position="0 5 -18" rotation="0 0 0"></a-entity>
+
+    <!-- Vesak Lanterns -->
+    <a-entity class="lantern" gltf-model="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/Lantern/glTF-Binary/Lantern.glb" 
+              scale="1.6 1.6 1.6" position="-4 1.8 -6" 
+              animation="property: rotation; to: 0 360 0; dur: 14000; loop: true;"></a-entity>
+
+    <a-entity class="lantern" gltf-model="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/Lantern/glTF-Binary/Lantern.glb" 
+              scale="1.5 1.5 1.5" position="4 2 -7" 
+              animation="property: rotation; to: 0 360 0; dur: 16000; loop: true;"></a-entity>
+
+    <!-- Flying Lanterns -->
+    <a-entity class="flying" gltf-model="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/Lantern/glTF-Binary/Lantern.glb" 
+              scale="0.9 0.9 0.9" position="-3 3 -15" 
+              animation="property: position; to: -3 12 -15; dur: 30000; loop: false;"></a-entity>
+
+    <!-- Fireflies -->
+    <a-entity position="0 5 -10" particle-system="preset: dust; color: #ffdd77,#ffeeaa; particleCount: 400; size: 0.06"></a-entity>
 
   </a-scene>
 
-  <button onclick="startWebXR()">
-    📱 Start WebXR AR
-  </button>
+  <div class="controls">
+    <button onclick="startAR()">📱 Start Vesak AR</button>
+    <button onclick="addLantern()">➕ Add Lantern</button>
+  </div>
 
   <script>
-    function startWebXR() {
+    function startAR() {
       const scene = document.querySelector('a-scene');
       scene.enterVR('immersive-ar');
     }
 
-    // Tap to place new lanterns
-    document.querySelector('a-scene').addEventListener('click', function(e) {
-      if (!document.querySelector('a-scene').is('ar-mode')) return;
-
+    function addLantern() {
+      const scene = document.querySelector('a-scene');
       const lantern = document.createElement('a-entity');
+      
       lantern.setAttribute('gltf-model', 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/Lantern/glTF-Binary/Lantern.glb');
-      lantern.setAttribute('scale', '1.5 1.5 1.5');
-      lantern.setAttribute('animation', 'property: rotation; to: 0 360 0; dur: 14000; loop: true');
-      document.querySelector('a-scene').appendChild(lantern);
-    });
+      lantern.setAttribute('scale', '1.4 1.4 1.4');
+      lantern.setAttribute('animation', 'property: rotation; to: 0 360 0; dur: 13000; loop: true');
+      
+      scene.appendChild(lantern);
+    }
 
-    // Show message when XR session starts
+    // Auto add some lanterns when AR starts
     document.querySelector('a-scene').addEventListener('enter-vr', () => {
-      console.log("WebXR AR Started");
+      console.log("Vesak City AR Started");
     });
   </script>
 </body>
