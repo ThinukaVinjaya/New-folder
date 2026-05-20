@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>🌟 My Vesak City - WebXR</title>
+  <title>🌟 Realistic AR Vesak City</title>
   <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
   <style>
     body { margin: 0; overflow: hidden; background: #000; }
@@ -24,8 +24,8 @@
 <body>
 
   <div class="ui">
-    <h2>🌕 My AR Vesak City</h2>
-    <p>Point at floor → Tap to place more lanterns</p>
+    <h2>🌕 Realistic Vesak City</h2>
+    <p>Move forward slowly • Tap to add lanterns</p>
   </div>
 
   <a-scene 
@@ -35,45 +35,55 @@
     <a-camera></a-camera>
 
     <!-- Realistic Night Lighting -->
-    <a-light type="ambient" intensity="0.45" color="#445577"></a-light>
-    <a-light type="directional" position="5 12 8" intensity="0.9" color="#ffddbb"></a-light>
+    <a-light type="ambient" intensity="0.4" color="#445577"></a-light>
+    <a-light type="directional" position="8 15 10" intensity="0.85" color="#ffddbb"></a-light>
 
-    <!-- Ground -->
-    <a-plane rotation="-90 0 0" width="100" height="100" color="#001a00" opacity="0.25"></a-plane>
+    <!-- Large Ground -->
+    <a-plane rotation="-90 0 0" width="200" height="200" color="#001a00" opacity="0.3"></a-plane>
 
-    <!-- Main Temple -->
+    <!-- ====================== MAIN CITY ====================== -->
+
+    <!-- Temple (Far Center) -->
     <a-entity gltf-model="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/Duck/glTF-Binary/Duck.glb" 
-              scale="7 7 7" position="0 0 -8" rotation="0 45 0"></a-entity>
+              scale="9 9 9" position="0 0 -18" rotation="0 30 0"></a-entity>
 
     <!-- Buddha Statue -->
     <a-entity gltf-model="https://assets.babylonjs.com/meshes/BoomBox.glb" 
-              scale="2 2 2" position="0 1.5 -12" rotation="0 180 0"></a-entity>
+              scale="2.2 2.2 2.2" position="0 2 -14" rotation="0 180 0"></a-entity>
 
-    <!-- Thorana (Big Arch) -->
+    <!-- Thorana (Large Arch - farther) -->
     <a-entity gltf-model="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/Lantern/glTF-Binary/Lantern.glb" 
-              scale="3.5 3.5 3.5" position="0 5 -18" rotation="0 0 0"></a-entity>
+              scale="4 4 4" position="0 6 -26" rotation="0 0 0"></a-entity>
 
-    <!-- Vesak Lanterns -->
+    <!-- Multiple Vesak Lanterns (Spread out) -->
     <a-entity class="lantern" gltf-model="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/Lantern/glTF-Binary/Lantern.glb" 
-              scale="1.6 1.6 1.6" position="-4 1.8 -6" 
-              animation="property: rotation; to: 0 360 0; dur: 14000; loop: true;"></a-entity>
-
-    <a-entity class="lantern" gltf-model="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/Lantern/glTF-Binary/Lantern.glb" 
-              scale="1.5 1.5 1.5" position="4 2 -7" 
+              scale="1.8 1.8 1.8" position="-6 2 -10" 
               animation="property: rotation; to: 0 360 0; dur: 16000; loop: true;"></a-entity>
+
+    <a-entity class="lantern" gltf-model="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/Lantern/glTF-Binary/Lantern.glb" 
+              scale="1.7 1.7 1.7" position="7 2.2 -12" 
+              animation="property: rotation; to: 0 360 0; dur: 18000; loop: true;"></a-entity>
+
+    <a-entity class="lantern" gltf-model="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/Lantern/glTF-Binary/Lantern.glb" 
+              scale="1.6 1.6 1.6" position="-8 2.5 -20" 
+              animation="property: rotation; to: 0 360 0; dur: 14000; loop: true;"></a-entity>
 
     <!-- Flying Lanterns -->
     <a-entity class="flying" gltf-model="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/Lantern/glTF-Binary/Lantern.glb" 
-              scale="0.9 0.9 0.9" position="-3 3 -15" 
-              animation="property: position; to: -3 12 -15; dur: 30000; loop: false;"></a-entity>
+              scale="1 1 1" position="-5 4 -22" 
+              animation="property: position; to: -5 15 -22; dur: 35000; loop: false;"></a-entity>
 
-    <!-- Fireflies -->
-    <a-entity position="0 5 -10" particle-system="preset: dust; color: #ffdd77,#ffeeaa; particleCount: 400; size: 0.06"></a-entity>
+    <a-entity class="flying" gltf-model="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/Lantern/glTF-Binary/Lantern.glb" 
+              scale="0.9 0.9 0.9" position="6 3.5 -24" 
+              animation="property: position; to: 6 14 -24; dur: 32000; loop: false;"></a-entity>
+
+    <!-- Fireflies / Light Particles -->
+    <a-entity position="0 6 -15" particle-system="preset: dust; color: #ffdd77,#ffeeaa; particleCount: 450; size: 0.05"></a-entity>
 
   </a-scene>
 
   <div class="controls">
-    <button onclick="startAR()">📱 Start Vesak AR</button>
+    <button onclick="startAR()">📱 Start Realistic AR</button>
     <button onclick="addLantern()">➕ Add Lantern</button>
   </div>
 
@@ -86,18 +96,11 @@
     function addLantern() {
       const scene = document.querySelector('a-scene');
       const lantern = document.createElement('a-entity');
-      
       lantern.setAttribute('gltf-model', 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/Lantern/glTF-Binary/Lantern.glb');
-      lantern.setAttribute('scale', '1.4 1.4 1.4');
-      lantern.setAttribute('animation', 'property: rotation; to: 0 360 0; dur: 13000; loop: true');
-      
+      lantern.setAttribute('scale', '1.5 1.5 1.5');
+      lantern.setAttribute('animation', 'property: rotation; to: 0 360 0; dur: 14000; loop: true');
       scene.appendChild(lantern);
     }
-
-    // Auto add some lanterns when AR starts
-    document.querySelector('a-scene').addEventListener('enter-vr', () => {
-      console.log("Vesak City AR Started");
-    });
   </script>
 </body>
 </html>
