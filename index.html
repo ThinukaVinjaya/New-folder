@@ -27,6 +27,7 @@
       const flyingLanterns = [];
       const pathLights = [];
       const particleGroups = [];
+      const forwardVector = new THREE.Vector3();
 
       init();
       animate();
@@ -81,15 +82,22 @@
       }
 
       function onSelect() {
-        if (reticle.visible && !world) {
+        if (!world) {
           placeScene();
         }
       }
 
       function placeScene() {
         world = new THREE.Group();
-        world.position.setFromMatrixPosition(reticle.matrix);
-        world.quaternion.setFromRotationMatrix(reticle.matrix);
+        if (reticle.visible) {
+          world.position.setFromMatrixPosition(reticle.matrix);
+          world.quaternion.setFromRotationMatrix(reticle.matrix);
+        } else {
+          camera.getWorldDirection(forwardVector);
+          forwardVector.multiplyScalar(1.2);
+          world.position.copy(camera.position).add(forwardVector);
+          world.quaternion.copy(camera.quaternion);
+        }
         scene.add(world);
 
         addGround(world);
