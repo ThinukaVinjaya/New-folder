@@ -3,103 +3,100 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>🌟 Realistic AR Vesak City</title>
+  <title>🌟 My Vesak City</title>
   <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
+  <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
   <style>
-    body { margin: 0; overflow: hidden; background: #000; }
+    body { margin: 0; overflow: hidden; }
     .ui {
       position: absolute; top: 10px; left: 10px; color: #ffddaa; 
-      background: rgba(0,0,0,0.7); padding: 15px; border-radius: 12px; 
-      z-index: 1000; font-family: Arial;
-    }
-    .controls {
-      position: fixed; bottom: 20px; left: 20px; z-index: 10000;
-    }
-    button {
-      padding: 14px 24px; margin: 5px; font-size: 17px; border: none; 
-      border-radius: 12px; background: #ffcc00; color: black;
+      background: rgba(0,0,0,0.7); padding: 15px; border-radius: 12px; z-index: 1000;
     }
   </style>
 </head>
 <body>
 
   <div class="ui">
-    <h2>🌕 Realistic Vesak City</h2>
-    <p>Move forward slowly • Tap to add lanterns</p>
+    <h2>🌕 My Vesak City</h2>
+    <p id="status">Getting GPS Location...</p>
   </div>
 
   <a-scene 
-    background="color: #0a001f"
-    xr-mode-ui="enabled: true">
+    embedded 
+    arjs="sourceType: webcam; videoTexture: true; debugUIEnabled: false;"
+    renderer="alpha: true; antialias: true;"
+    background="color: transparent">
 
-    <a-camera></a-camera>
+    <a-camera gps-new-camera="gpsMinDistance: 8; positionMinAccuracy: 20"></a-camera>
 
-    <!-- Realistic Night Lighting -->
-    <a-light type="ambient" intensity="0.4" color="#445577"></a-light>
-    <a-light type="directional" position="8 15 10" intensity="0.85" color="#ffddbb"></a-light>
-
-    <!-- Large Ground -->
-    <a-plane rotation="-90 0 0" width="200" height="200" color="#001a00" opacity="0.3"></a-plane>
-
-    <!-- ====================== MAIN CITY ====================== -->
-
-    <!-- Temple (Far Center) -->
-    <a-entity gltf-model="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/Duck/glTF-Binary/Duck.glb" 
-              scale="9 9 9" position="0 0 -18" rotation="0 30 0"></a-entity>
+    <!-- Temple -->
+    <a-entity 
+      gltf-model="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/Duck/glTF-Binary/Duck.glb"
+      gps-new-entity-place="latitude: 6.98166; longitude: 81.07729"
+      scale="8 8 8" position="0 0 0" rotation="0 30 0"></a-entity>
 
     <!-- Buddha Statue -->
-    <a-entity gltf-model="https://assets.babylonjs.com/meshes/BoomBox.glb" 
-              scale="2.2 2.2 2.2" position="0 2 -14" rotation="0 180 0"></a-entity>
+    <a-entity 
+      gltf-model="https://assets.babylonjs.com/meshes/BoomBox.glb"
+      gps-new-entity-place="latitude: 6.98166; longitude: 81.07729"
+      scale="2.2 2.2 2.2" position="5 2 -12" rotation="0 180 0"></a-entity>
 
-    <!-- Thorana (Large Arch - farther) -->
-    <a-entity gltf-model="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/Lantern/glTF-Binary/Lantern.glb" 
-              scale="4 4 4" position="0 6 -26" rotation="0 0 0"></a-entity>
+    <!-- Thorana -->
+    <a-entity 
+      gltf-model="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/Lantern/glTF-Binary/Lantern.glb"
+      gps-new-entity-place="latitude: 6.98166; longitude: 81.07729"
+      scale="4 4 4" position="-8 6 -24"></a-entity>
 
-    <!-- Multiple Vesak Lanterns (Spread out) -->
-    <a-entity class="lantern" gltf-model="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/Lantern/glTF-Binary/Lantern.glb" 
-              scale="1.8 1.8 1.8" position="-6 2 -10" 
-              animation="property: rotation; to: 0 360 0; dur: 16000; loop: true;"></a-entity>
+    <!-- Vesak Lanterns -->
+    <a-entity class="lantern" 
+      gltf-model="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/Lantern/glTF-Binary/Lantern.glb"
+      gps-new-entity-place="latitude: 6.98166; longitude: 81.07729"
+      scale="1.8 1.8 1.8" position="-10 2 -14"
+      animation="property: rotation; to: 0 360 0; dur: 16000; loop: true;"></a-entity>
 
-    <a-entity class="lantern" gltf-model="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/Lantern/glTF-Binary/Lantern.glb" 
-              scale="1.7 1.7 1.7" position="7 2.2 -12" 
-              animation="property: rotation; to: 0 360 0; dur: 18000; loop: true;"></a-entity>
-
-    <a-entity class="lantern" gltf-model="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/Lantern/glTF-Binary/Lantern.glb" 
-              scale="1.6 1.6 1.6" position="-8 2.5 -20" 
-              animation="property: rotation; to: 0 360 0; dur: 14000; loop: true;"></a-entity>
+    <a-entity class="lantern" 
+      gltf-model="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/Lantern/glTF-Binary/Lantern.glb"
+      gps-new-entity-place="latitude: 6.98166; longitude: 81.07729"
+      scale="1.7 1.7 1.7" position="9 2.2 -16"
+      animation="property: rotation; to: 0 360 0; dur: 18000; loop: true;"></a-entity>
 
     <!-- Flying Lanterns -->
-    <a-entity class="flying" gltf-model="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/Lantern/glTF-Binary/Lantern.glb" 
-              scale="1 1 1" position="-5 4 -22" 
-              animation="property: position; to: -5 15 -22; dur: 35000; loop: false;"></a-entity>
+    <a-entity 
+      gltf-model="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/Lantern/glTF-Binary/Lantern.glb"
+      gps-new-entity-place="latitude: 6.98166; longitude: 81.07729"
+      scale="1 1 1" position="-5 4 -20"
+      animation="property: position; to: -5 15 -20; dur: 35000; loop: false;"></a-entity>
 
-    <a-entity class="flying" gltf-model="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/Lantern/glTF-Binary/Lantern.glb" 
-              scale="0.9 0.9 0.9" position="6 3.5 -24" 
-              animation="property: position; to: 6 14 -24; dur: 32000; loop: false;"></a-entity>
-
-    <!-- Fireflies / Light Particles -->
-    <a-entity position="0 6 -15" particle-system="preset: dust; color: #ffdd77,#ffeeaa; particleCount: 450; size: 0.05"></a-entity>
+    <!-- Fireflies -->
+    <a-entity 
+      gps-new-entity-place="latitude: 6.98166; longitude: 81.07729"
+      position="0 6 -12" 
+      particle-system="preset: dust; color: #ffdd77,#ffeeaa; particleCount: 400"></a-entity>
 
   </a-scene>
 
-  <div class="controls">
-    <button onclick="startAR()">📱 Start Realistic AR</button>
-    <button onclick="addLantern()">➕ Add Lantern</button>
-  </div>
-
   <script>
-    function startAR() {
-      const scene = document.querySelector('a-scene');
-      scene.enterVR('immersive-ar');
-    }
+    navigator.geolocation.watchPosition((pos) => {
+      const distance = calculateDistance(pos.coords.latitude, pos.coords.longitude, 6.98166, 81.07729);
+      document.getElementById('status').innerHTML = `
+        GPS Active ✅<br>
+        Accuracy: ${pos.coords.accuracy.toFixed(1)}m<br>
+        Distance: ${distance.toFixed(0)}m from target
+      `;
+    }, (err) => {
+      document.getElementById('status').innerHTML = "❌ Allow Location Permission";
+    });
 
-    function addLantern() {
-      const scene = document.querySelector('a-scene');
-      const lantern = document.createElement('a-entity');
-      lantern.setAttribute('gltf-model', 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/Lantern/glTF-Binary/Lantern.glb');
-      lantern.setAttribute('scale', '1.5 1.5 1.5');
-      lantern.setAttribute('animation', 'property: rotation; to: 0 360 0; dur: 14000; loop: true');
-      scene.appendChild(lantern);
+    // Distance calculation function
+    function calculateDistance(lat1, lon1, lat2, lon2) {
+      const R = 6371000; // Earth radius in meters
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLon = (lon2 - lon1) * Math.PI / 180;
+      const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                Math.sin(dLon/2) * Math.sin(dLon/2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+      return R * c;
     }
   </script>
 </body>
