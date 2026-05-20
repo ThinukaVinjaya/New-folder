@@ -3,23 +3,24 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>🌟 AR Vesak City with Real Models</title>
+  <title>🌟 AR Vesak City - Fixed Visibility</title>
   <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
   <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
   <style>
     body { margin: 0; overflow: hidden; background: transparent; }
     .ui {
       position: absolute; top: 10px; left: 10px; color: #ffddaa; 
-      background: rgba(0,0,0,0.5); padding: 12px 18px; border-radius: 10px; 
+      background: rgba(0,0,0,0.6); padding: 12px 18px; border-radius: 10px; 
       z-index: 1000; font-family: Arial;
     }
+    button { margin: 5px; padding: 10px 16px; font-size: 15px; }
   </style>
 </head>
 <body>
 
   <div class="ui">
     <h2>🌕 AR Vesak City</h2>
-    <p>Real Camera • Move forward slowly</p>
+    <p>Point camera at floor • Tap screen to place lanterns</p>
   </div>
 
   <a-scene 
@@ -30,76 +31,90 @@
 
     <a-camera></a-camera>
 
-    <a-light type="ambient" intensity="0.8" color="#ffffff"></a-light>
-    <a-light type="directional" position="5 12 8" intensity="1.0" color="#ffeedd"></a-light>
+    <!-- Lighting -->
+    <a-light type="ambient" intensity="0.9" color="#ffffff"></a-light>
+    <a-light type="directional" position="5 15 8" intensity="1.1" color="#ffeedd"></a-light>
 
     <!-- Light ground -->
-    <a-plane rotation="-90 0 0" width="80" height="80" color="#112211" opacity="0.12"></a-plane>
+    <a-plane rotation="-90 0 0" width="100" height="100" color="#112211" opacity="0.15"></a-plane>
 
-    <!-- Temple -->
+    <!-- Temple (Closer & Visible by default) -->
     <a-entity id="temple" 
               gltf-model="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/Duck/glTF-Binary/Duck.glb" 
-              scale="6 6 6" position="0 0 -8" visible="false"></a-entity>
+              scale="5 5 5" position="0 0 -6" visible="true"></a-entity>
 
-    <!-- Buddha Statue (Good free model) -->
+    <!-- Buddha -->
     <a-entity id="buddha" 
               gltf-model="https://assets.babylonjs.com/meshes/BoomBox.glb" 
-              scale="1.8 1.8 1.8" position="0 1.2 -13" rotation="0 180 0" visible="false"></a-entity>
+              scale="1.6 1.6 1.6" position="1 1.2 -10" rotation="0 180 0" visible="true"></a-entity>
 
-    <!-- Vesak Lantern (Real Sri Lankan style) -->
-    <a-entity class="lantern" 
-              gltf-model="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/Lantern/glTF-Binary/Lantern.glb" 
-              scale="1.6 1.6 1.6" position="-4 2 -7" 
-              animation="property: rotation; to: 0 360 0; dur: 15000; loop: true;" visible="false"></a-entity>
-
-    <a-entity class="lantern" 
-              gltf-model="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/Lantern/glTF-Binary/Lantern.glb" 
-              scale="1.5 1.5 1.5" position="4 2 -9" 
-              animation="property: rotation; to: 0 360 0; dur: 17000; loop: true;" visible="false"></a-entity>
-
-    <!-- Thorana Placeholder (No perfect free .glb found easily) -->
+    <!-- Thorana -->
     <a-entity id="thorana" 
               gltf-model="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/Lantern/glTF-Binary/Lantern.glb" 
-              scale="3 3 3" position="0 4 -22" visible="false"></a-entity>
+              scale="2.8 2.8 2.8" position="0 4 -14" visible="true"></a-entity>
 
-    <!-- Flying Lanterns -->
-    <a-entity class="flying" 
+    <!-- Lanterns -->
+    <a-entity class="lantern" 
               gltf-model="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/Lantern/glTF-Binary/Lantern.glb" 
-              scale="0.9 0.9 0.9" position="-3 3 -19" visible="false"></a-entity>
+              scale="1.5 1.5 1.5" position="-3 1.8 -5" 
+              animation="property: rotation; to: 0 360 0; dur: 12000; loop: true;" visible="true"></a-entity>
+
+    <a-entity class="lantern" 
+              gltf-model="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/Lantern/glTF-Binary/Lantern.glb" 
+              scale="1.4 1.4 1.4" position="3 1.8 -6" 
+              animation="property: rotation; to: 0 360 0; dur: 15000; loop: true;" visible="true"></a-entity>
 
     <!-- Fireflies -->
-    <a-entity position="0 5 -12" 
-              particle-system="preset: dust; color: #ffdd77,#ffeeaa; particleCount: 300; size: 0.05"></a-entity>
+    <a-entity position="0 4 -8" 
+              particle-system="preset: dust; color: #ffdd77,#ffeeaa; particleCount: 350; size: 0.06"></a-entity>
 
   </a-scene>
 
   <script>
-    const camera = document.querySelector('a-camera');
-
-    function revealModels() {
-      const z = camera.object3D.position.z;
-      if (z < -5) document.getElementById('temple').setAttribute('visible', true);
-      if (z < -10) document.getElementById('buddha').setAttribute('visible', true);
-      if (z < -16) {
-        document.getElementById('thorana').setAttribute('visible', true);
-        document.querySelectorAll('.lantern').forEach(l => l.setAttribute('visible', true));
-      }
-      if (z < -22) {
-        document.querySelectorAll('.flying').forEach(el => {
-          el.setAttribute('visible', true);
-          el.setAttribute('animation', 'property: position; to: 0 12 -19; dur: 28000; loop: false');
-        });
-      }
-    }
-
+    // Force show all objects after loading
     document.querySelector('a-scene').addEventListener('loaded', () => {
-      setInterval(revealModels, 250);
+      console.log("Scene loaded - Objects should be visible");
+      
+      // Extra safety - force visible
+      setTimeout(() => {
+        document.querySelectorAll('a-entity').forEach(el => {
+          if (el.getAttribute('gltf-model')) {
+            el.setAttribute('visible', true);
+          }
+        });
+      }, 1500);
+    });
+
+    // Tap anywhere to place extra lantern
+    document.querySelector('a-scene').addEventListener('click', () => {
+      const lantern = document.createElement('a-entity');
+      lantern.setAttribute('gltf-model', 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/Lantern/glTF-Binary/Lantern.glb');
+      lantern.setAttribute('scale', '1.3 1.3 1.3');
+      lantern.setAttribute('position', '0 1.5 -4');
+      lantern.setAttribute('animation', 'property: rotation; to: 0 360 0; dur: 12000; loop: true');
+      document.querySelector('a-scene').appendChild(lantern);
     });
   </script>
 
-  <button onclick="document.querySelector('a-scene').enterVR()" 
-          style="position:fixed; bottom:30px; left:30px; z-index:10000; padding:15px 25px; background:#ffcc00; color:black; border:none; border-radius:10px;">
-    📱 Start AR Vesak City
-  </button>
+  <div style="position:fixed; bottom:20px; left:20px; z-index:10000;">
+    <button onclick="document.querySelector('a-scene').enterVR()" 
+            style="padding:14px 24px; font-size:17px; background:#ffcc00; color:black; border:none; border-radius:10px;">
+      📱 Start AR
+    </button>
+    
+    <button onclick="forceShowAll()" 
+            style="padding:14px 20px; font-size:16px; background:#00ccff; color:black; border:none; border-radius:10px;">
+      👁 Show All Objects
+    </button>
+  </div>
+
+  <script>
+    function forceShowAll() {
+      document.querySelectorAll('a-entity').forEach(el => {
+        if (el.getAttribute('gltf-model')) el.setAttribute('visible', true);
+      });
+      alert("All objects forced visible!");
+    }
+  </script>
 </body>
 </html>
