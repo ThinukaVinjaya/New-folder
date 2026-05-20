@@ -3,44 +3,79 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AR Test - Can You See the Box?</title>
+  <title>🌟 Vesak City - WebXR</title>
   <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
-  <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
   <style>
-    body { margin: 0; overflow: hidden; }
-    .info {
-      position: absolute; top: 10px; left: 10px; color: white; 
-      background: rgba(0,0,0,0.7); padding: 15px; border-radius: 10px; z-index: 100;
+    body { margin: 0; overflow: hidden; background: #000; }
+    .ui {
+      position: absolute; top: 10px; left: 10px; color: #ffddaa; 
+      background: rgba(0,0,0,0.7); padding: 15px; border-radius: 12px; 
+      z-index: 1000; font-family: Arial;
+    }
+    button {
+      position: fixed; bottom: 30px; left: 30px; z-index: 10000;
+      padding: 16px 28px; font-size: 18px; background: #ffcc00; 
+      color: black; border: none; border-radius: 12px;
     }
   </style>
 </head>
 <body>
 
-  <div class="info">
-    <h2>AR Test</h2>
-    <p>Point at floor → You should see a big RED box</p>
+  <div class="ui">
+    <h2>🌕 AR Vesak City (WebXR)</h2>
+    <p>Tap "Start WebXR" → Point at floor → Tap to place objects</p>
   </div>
 
   <a-scene 
-    embedded 
-    arjs="sourceType: webcam; videoTexture: true;"
-    renderer="alpha: true"
-    background="color: transparent">
+    background="color: #000011"
+    xr-mode-ui="enabled: true">
 
     <a-camera></a-camera>
 
-    <!-- Big colorful box for testing -->
-    <a-box position="0 0.5 -3" rotation="0 30 0" color="#ff0000" height="1" width="1" depth="1" visible="true"></a-box>
+    <!-- Soft lighting -->
+    <a-light type="ambient" intensity="0.8"></a-light>
+    <a-light type="directional" position="5 10 5" intensity="1.0" color="#ffeedd"></a-light>
 
-    <!-- Big glowing sphere -->
-    <a-sphere position="2 1 -4" radius="0.6" color="#00ff00" visible="true"></a-sphere>
+    <!-- Ground -->
+    <a-plane rotation="-90 0 0" width="100" height="100" color="#001100" opacity="0.2"></a-plane>
+
+    <!-- Test Objects (Big & Close) -->
+    <a-box id="testbox" position="0 0.6 -3" color="#ff0000" height="1.2" width="1.2" depth="1.2" visible="true"></a-box>
+    
+    <a-sphere position="2 1 -4" radius="0.8" color="#00ff88" visible="true"></a-sphere>
+
+    <!-- Vesak Lantern -->
+    <a-entity gltf-model="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/Lantern/glTF-Binary/Lantern.glb" 
+              scale="1.8 1.8 1.8" position="-2 1 -5" 
+              animation="property: rotation; to: 0 360 0; dur: 12000; loop: true;"></a-entity>
 
   </a-scene>
 
-  <button onclick="document.querySelector('a-scene').enterVR()" 
-          style="position:fixed; bottom:30px; left:30px; z-index:1000; padding:15px 25px; font-size:18px; background:#ffcc00; border:none; border-radius:10px;">
-    📱 Start AR
+  <button onclick="startWebXR()">
+    📱 Start WebXR AR
   </button>
 
+  <script>
+    function startWebXR() {
+      const scene = document.querySelector('a-scene');
+      scene.enterVR('immersive-ar');
+    }
+
+    // Tap to place new lanterns
+    document.querySelector('a-scene').addEventListener('click', function(e) {
+      if (!document.querySelector('a-scene').is('ar-mode')) return;
+
+      const lantern = document.createElement('a-entity');
+      lantern.setAttribute('gltf-model', 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/Lantern/glTF-Binary/Lantern.glb');
+      lantern.setAttribute('scale', '1.5 1.5 1.5');
+      lantern.setAttribute('animation', 'property: rotation; to: 0 360 0; dur: 14000; loop: true');
+      document.querySelector('a-scene').appendChild(lantern);
+    });
+
+    // Show message when XR session starts
+    document.querySelector('a-scene').addEventListener('enter-vr', () => {
+      console.log("WebXR AR Started");
+    });
+  </script>
 </body>
 </html>
