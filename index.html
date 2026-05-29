@@ -1,136 +1,103 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Vesak AR City - WebXR</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.134.0/examples/js/WebXRButton.js"></script>
+  <meta charset="utf-8">
+  <title>AR Vesak City</title>
   <style>
-    body { margin: 0; overflow: hidden; background: #000; }
-    #info {
-      position: absolute; top: 10px; left: 10px; color: white; font-family: Arial; 
-      background: rgba(0,0,0,0.5); padding: 10px; border-radius: 8px; z-index: 100;
-    }
+    body { margin: 0; overflow: hidden; }
   </style>
 </head>
 <body>
-  <div id="info">
-    <h2>🌸 Vesak AR City</h2>
-    <p>Point camera at ground • Lotus Path • Temple • Buddha • Lanterns</p>
-  </div>
 
-  <script>
-    // Basic Three.js + WebXR setup
-    let scene, camera, renderer;
-    let xrSession = null;
+<script type="module">
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160/build/three.module.js';
+import { ARButton } from 'https://cdn.jsdelivr.net/npm/three@0.160/examples/jsm/webxr/ARButton.js';
+import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.160/examples/jsm/loaders/GLTFLoader.js';
 
-    init();
-    animate();
+let camera, scene, renderer;
+let loader = new GLTFLoader();
 
-    function init() {
-      scene = new THREE.Scene();
-      camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-      
-      renderer = new THREE.WebGLRenderer({ antialias: true });
-      renderer.setSize(window.innerWidth, window.innerHeight);
-      renderer.xr.enabled = true;
-      document.body.appendChild(renderer.domElement);
+init();
 
-      // Add AR button
-      const button = document.createElement('button');
-      button.textContent = '🌸 Enter Vesak AR';
-      button.style.position = 'absolute';
-      button.style.bottom = '30px';
-      button.style.left = '50%';
-      button.style.transform = 'translateX(-50%)';
-      button.style.padding = '15px 30px';
-      button.style.fontSize = '18px';
-      button.style.background = '#FFD700';
-      button.style.border = 'none';
-      button.style.borderRadius = '12px';
-      button.style.cursor = 'pointer';
-      button.onclick = () => renderer.xr.startSession('immersive-ar', { requiredFeatures: ['hit-test'] });
-      document.body.appendChild(button);
+function init() {
+  scene = new THREE.Scene();
 
-      // Lighting
-      const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
-      scene.add(ambientLight);
-      const directionalLight = new THREE.DirectionalLight(0xffddaa, 1.2);
-      directionalLight.position.set(5, 10, 5);
-      scene.add(directionalLight);
+  camera = new THREE.PerspectiveCamera(70, window.innerWidth/window.innerHeight, 0.01, 20);
 
-      // Ground (Lotus Flower Path)
-      const ground = new THREE.Mesh(
-        new THREE.PlaneGeometry(20, 20),
-        new THREE.MeshLambertMaterial({ color: 0x228B22 })
-      );
-      ground.rotation.x = -Math.PI / 2;
-      scene.add(ground);
+  renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.xr.enabled = true;
 
-      // Lotus Flowers along path
-      for (let i = -8; i <= 8; i += 2) {
-        const lotus = new THREE.Mesh(
-          new THREE.CylinderGeometry(0.8, 1.2, 0.3, 8),
-          new THREE.MeshPhongMaterial({ color: 0xFF69B4, emissive: 0xFF1493 })
-        );
-        lotus.position.set(i, 0.2, -5 + Math.random() * 10);
-        lotus.rotation.x = Math.random() * 0.5;
-        scene.add(lotus);
-      }
+  document.body.appendChild(renderer.domElement);
+  document.body.appendChild(ARButton.createButton(renderer));
 
-      // Buddhist Temple (simple stylized)
-      const temple = new THREE.Mesh(
-        new THREE.BoxGeometry(6, 4, 6),
-        new THREE.MeshPhongMaterial({ color: 0xFFD700 })
-      );
-      temple.position.set(0, 2, -12);
-      scene.add(temple);
+  // Light
+  const light = new THREE.HemisphereLight(0xffffff, 0xbbbbff, 1);
+  scene.add(light);
 
-      // Buddha Statue
-      const buddha = new THREE.Mesh(
-        new THREE.SphereGeometry(2, 32, 32),
-        new THREE.MeshPhongMaterial({ color: 0xFFD700, emissive: 0xFFAA00 })
-      );
-      buddha.position.set(-4, 1.5, -8);
-      scene.add(buddha);
+  // Load Models
+  loadModels();
 
-      // Flying Sky Lanterns
-      for (let i = 0; i < 15; i++) {
-        const lantern = new THREE.Mesh(
-          new THREE.BoxGeometry(0.8, 1.2, 0.8),
-          new THREE.MeshPhongMaterial({ color: Math.random() * 0xffffff, emissive: 0xFFAA00 })
-        );
-        lantern.position.set(
-          Math.random() * 20 - 10,
-          3 + Math.random() * 8,
-          -15 + Math.random() * 10
-        );
-        scene.add(lantern);
-      }
+  renderer.setAnimationLoop(render);
+}
 
-      // Vesak Lanterns hanging
-      for (let i = -10; i <= 10; i += 3) {
-        const lantern = new THREE.Mesh(
-          new THREE.IcosahedronGeometry(1, 1),
-          new THREE.MeshPhongMaterial({ color: 0xFF4500, emissive: 0xFF0000 })
-        );
-        lantern.position.set(i, 4, -6);
-        scene.add(lantern);
-      }
-    }
+function loadModels() {
 
-    function animate() {
-      requestAnimationFrame(animate);
-      renderer.render(scene, camera);
-    }
+  const center = new THREE.Vector3(0, 0, -2);
 
-    // Handle window resize
-    window.addEventListener('resize', () => {
-      camera.aspect = window.innerWidth / window.innerHeight;
-      camera.updateProjectionMatrix();
-      renderer.setSize(window.innerWidth, window.innerHeight);
+  // STUPA (CENTER)
+  loader.load('RAW_STHUPA_URL', (gltf) => {
+    let stupa = gltf.scene;
+    stupa.scale.set(2,2,2);
+    stupa.position.copy(center);
+    scene.add(stupa);
+  });
+
+  // BUDDHA (LEFT)
+  loader.load('RAW_BUDDHA_URL', (gltf) => {
+    let buddha = gltf.scene;
+    buddha.position.set(-1.5, 0, -2);
+    scene.add(buddha);
+  });
+
+  // LOTUS FLOWERS (GROUND + RIGHT SIDE DENSE)
+  for (let i = 0; i < 50; i++) {
+    loader.load('RAW_LOTUS_URL', (gltf) => {
+      let lotus = gltf.scene;
+
+      let x = Math.random() * 4 - 2;
+      let z = Math.random() * 4 - 2;
+
+      // MORE ON RIGHT SIDE
+      if (Math.random() > 0.5) x += 1.5;
+
+      lotus.position.set(x, 0, z - 2);
+      lotus.scale.setScalar(Math.random() * 0.5 + 0.5);
+
+      scene.add(lotus);
     });
-  </script>
+  }
+
+  // LANTERNS (FLOATING)
+  for (let i = 0; i < 10; i++) {
+    loader.load('RAW_LANTERN_URL', (gltf) => {
+      let lantern = gltf.scene;
+
+      lantern.position.set(
+        Math.random() * 3 - 1.5,
+        Math.random() * 1 + 1,
+        Math.random() * 3 - 2
+      );
+
+      scene.add(lantern);
+    });
+  }
+}
+
+function render() {
+  renderer.render(scene, camera);
+}
+
+</script>
 </body>
 </html>
