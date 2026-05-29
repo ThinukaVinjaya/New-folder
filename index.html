@@ -14,7 +14,7 @@
   </head>
   <body>
     <div id="loading">Loading your Vesak city... Please wait.</div>
-    <div id="overlay"><div id="startHint">Tap the AR button, then wait for the floor reticle to appear or tap to place your city.</div></div>
+    <div id="overlay"><div id="startHint">Tap the AR button to view on your floor, or wait for the city preview to appear.</div></div>
     <script type="module">
       import * as THREE from 'https://unpkg.com/three@0.150.1/build/three.module.js';
       import { ARButton } from 'https://unpkg.com/three@0.150.1/examples/jsm/webxr/ARButton.js';
@@ -134,9 +134,25 @@
           sessionStartTime = null;
         });
 
+        // Hide the loading screen once initialization completes
+        setTimeout(() => {
+          const loadingEl = document.getElementById('loading');
+          if (loadingEl) loadingEl.style.display = 'none';
+        }, 600);
+
+        // If AR does not start quickly, show the city preview in the normal view.
+        setTimeout(() => {
+          if (!world && !renderer.xr.getSession()) {
+            placeScene();
+          }
+        }, 1200);
+
         window.addEventListener('resize', onWindowResize);
         window.addEventListener('orientationchange', onWindowResize);
-        window.addEventListener('load', () => setTimeout(() => document.getElementById('loading').style.display = 'none', 600));
+        window.addEventListener('load', () => setTimeout(() => {
+          const loadingEl = document.getElementById('loading');
+          if (loadingEl) loadingEl.style.display = 'none';
+        }, 600));
       }
 
       function onWindowResize() {
