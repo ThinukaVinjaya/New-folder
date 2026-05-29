@@ -13,8 +13,8 @@
     </style>
   </head>
   <body>
-    <div id="loading">Loading Vesak AR City... Please wait.</div>
-    <div id="overlay"><div id="startHint">Tap the AR button, then wait for the floor reticle to appear or tap to place the Vesak city.</div></div>
+    <div id="loading">Loading your Vesak city... Please wait.</div>
+    <div id="overlay"><div id="startHint">Tap the AR button, then wait for the floor reticle to appear or tap to place your city.</div></div>
     <script type="module">
       import * as THREE from 'https://unpkg.com/three@0.150.1/build/three.module.js';
       import { ARButton } from 'https://unpkg.com/three@0.150.1/examples/jsm/webxr/ARButton.js';
@@ -25,6 +25,7 @@
       let hitTestSource = null;
       let hitTestSourceRequested = false;
       let world = null;
+      let sessionStartTime = null;
       const flyingLanterns = [];
       const pathLights = [];
       const particleGroups = [];
@@ -126,8 +127,12 @@
         controller.addEventListener('select', onSelect);
         scene.add(controller);
 
-        document.body.appendChild(ARButton.createButton(renderer, { requiredFeatures: ['hit-test'] }));
+        document.body.appendChild(ARButton.createButton(renderer, { requiredFeatures: ['hit-test'], optionalFeatures: ['local-floor'] }));
         loadModels();
+
+        renderer.xr.addEventListener('sessionstart', () => {
+          sessionStartTime = null;
+        });
 
         window.addEventListener('resize', onWindowResize);
         window.addEventListener('orientationchange', onWindowResize);
@@ -412,6 +417,9 @@
         if (frame) {
           const session = renderer.xr.getSession();
           const referenceSpace = renderer.xr.getReferenceSpace();
+          if (!sessionStartTime && session) {
+            sessionStartTime = timestamp;
+          }
           if (!hitTestSourceRequested && session) {
             session.requestReferenceSpace('viewer').then((refSpace) => {
               session.requestHitTestSource({ space: refSpace }).then((source) => { hitTestSource = source; });
@@ -436,6 +444,10 @@
             } else {
               reticle.visible = false;
             }
+          }
+
+          if (!world && session && sessionStartTime !== null && timestamp - sessionStartTime > 3000) {
+            placeScene();
           }
         }
 
