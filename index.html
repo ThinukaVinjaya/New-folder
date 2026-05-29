@@ -42,6 +42,7 @@
         renderer.domElement.style.width = '100%';
         renderer.domElement.style.height = '100%';
         renderer.xr.enabled = true;
+        renderer.xr.setReferenceSpaceType('local-floor');
         document.body.appendChild(renderer.domElement);
 
         scene = new THREE.Scene();
@@ -388,6 +389,10 @@
               const pose = hit.getPose(referenceSpace);
               reticle.visible = true;
               reticle.matrix.fromArray(pose.transform.matrix);
+
+              if (!world) {
+                placeScene();
+              }
             } else {
               reticle.visible = false;
             }
