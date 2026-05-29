@@ -96,9 +96,12 @@
           camera.getWorldDirection(forwardVector);
           forwardVector.multiplyScalar(1.2);
           world.position.copy(camera.position).add(forwardVector);
-          world.quaternion.copy(camera.quaternion);
+          world.position.y = 0;
+          const flatRotation = new THREE.Euler(0, camera.rotation.y, 0, 'YXZ');
+          world.quaternion.setFromEuler(flatRotation);
         }
         scene.add(world);
+        addGround(world);
 
         addLotusPath(world, 10, 2.7, 1.2);
         addLotusPath(world, 10, 5.2, 1.2, 0.4);
