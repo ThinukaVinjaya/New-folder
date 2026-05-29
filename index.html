@@ -92,6 +92,7 @@
         world = new THREE.Group();
         if (reticle.visible) {
           world.position.setFromMatrixPosition(reticle.matrix);
+          world.position.y = 0;
           world.quaternion.setFromRotationMatrix(reticle.matrix);
         } else {
           camera.getWorldDirection(forwardVector);
@@ -289,7 +290,7 @@
           new THREE.MeshStandardMaterial({ color: 0x0f261a, roughness: 0.95, transparent: true, opacity: 0.88 })
         );
         ground.rotation.x = -Math.PI / 2;
-        ground.position.y = -0.01;
+        ground.position.y = 0;
         parent.add(ground);
 
         const path = new THREE.Mesh(
