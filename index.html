@@ -18,7 +18,7 @@
     <script type="module">
       import * as THREE from 'https://unpkg.com/three@0.150.1/build/three.module.js';
       import { ARButton } from 'https://unpkg.com/three@0.150.1/examples/jsm/webxr/ARButton.js';
-      import { GLTFLoader } from 'https://unpkg.com/three@0.150.1/examples/jsm/loaders/GLTFLoader.js';
+      // No external model loader: using procedural fallbacks only
       import { EffectComposer } from 'https://unpkg.com/three@0.150.1/examples/jsm/postprocessing/EffectComposer.js';
       import { RenderPass } from 'https://unpkg.com/three@0.150.1/examples/jsm/postprocessing/RenderPass.js';
       import { UnrealBloomPass } from 'https://unpkg.com/three@0.150.1/examples/jsm/postprocessing/UnrealBloomPass.js';
@@ -35,52 +35,8 @@
       const pathLights = [];
       const particleGroups = [];
       const forwardVector = new THREE.Vector3();
-      const loader = new GLTFLoader();
-      const modelCache = {};
-      const modelUrls = {
-        buddha: 'budha_statue.glb',
-        stoneBuddha: 'stone_buddha_statue.glb',
-        lotus1: 'lotus1.glb',
-        lotus2: 'lotus_flower2.glb',
-        lotusLantern: 'lotus_lanttern.glb',
-        vesakLantern: 'vesak_lanterns.glb',
-        sthupa: 'sthupa_srilanka.glb'
-      };
-
-      function loadGLTF(url) {
-        return new Promise((resolve, reject) => {
-          loader.load(url, resolve, undefined, reject);
-        });
-      }
-
-      function loadModels() {
-        Object.entries(modelUrls).forEach(([key, url]) => {
-          loadGLTF(url).then((gltf) => {
-            modelCache[key] = gltf.scene;
-            modelCache[key].traverse((obj) => {
-              if (obj.isMesh) {
-                obj.castShadow = true;
-                obj.receiveShadow = true;
-              }
-            });
-          }).catch((err) => {
-            console.warn('Model load failed:', key, err);
-          });
-        });
-      }
-
-      function cloneModel(key, fallback) {
-        const source = modelCache[key];
-        if (source) {
-          const clone = source.clone(true);
-          clone.traverse((obj) => {
-            if (obj.isMesh) {
-              obj.castShadow = true;
-              obj.receiveShadow = true;
-            }
-          });
-          return clone;
-        }
+      // We will not use external GLTF models. Use procedural placeholders/fallbacks only.
+      function cloneModel(_key, fallback) {
         return fallback ? fallback() : new THREE.Group();
       }
 
@@ -151,7 +107,7 @@
           console.warn('ARButton unavailable, using fallback view:', err);
         }
 
-        loadModels();
+        // intentionally not loading external GLTFs; using procedural geometry only
 
         renderer.xr.addEventListener('sessionstart', () => {
           sessionStartTime = null;
