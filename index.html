@@ -134,7 +134,7 @@
           sessionStartTime = null;
         });
 
-        // Hide the loading screen once initialization completes
+        // Hide the loading screen once initialization completes.
         setTimeout(() => {
           const loadingEl = document.getElementById('loading');
           if (loadingEl) loadingEl.style.display = 'none';
@@ -142,10 +142,10 @@
 
         // If AR does not start quickly, show the city preview in the normal view.
         setTimeout(() => {
-          if (!world && !renderer.xr.getSession()) {
+          if (!world) {
             placeScene();
           }
-        }, 1200);
+        }, 1000);
 
         window.addEventListener('resize', onWindowResize);
         window.addEventListener('orientationchange', onWindowResize);
@@ -199,7 +199,10 @@
         addFlyingLanterns(world, 14);
         addFireflyGlow(world);
 
-        document.getElementById('startHint').style.display = 'none';
+        const loadingEl = document.getElementById('loading');
+        if (loadingEl) loadingEl.style.display = 'none';
+        const startHint = document.getElementById('startHint');
+        if (startHint) startHint.style.display = 'none';
       }
 
       function addLotusPath(parent, count, xOffset, spacing, radius = 0.4) {
