@@ -35,6 +35,9 @@
       const pathLights = [];
       const particleGroups = [];
       const forwardVector = new THREE.Vector3();
+      // Ensure renderer/scene/camera are declared (module strict mode requires declarations)
+      let renderer, scene, camera;
+
       // We will not use external GLTF models. Use procedural placeholders/fallbacks only.
       function cloneModel(_key, fallback) {
         return fallback ? fallback() : new THREE.Group();
