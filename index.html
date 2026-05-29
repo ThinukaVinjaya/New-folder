@@ -1,524 +1,478 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
-    <title>AR Vesak City</title>
-    <style>
-      body { margin: 0; font-family: sans-serif; overflow: hidden; background: #000; }
-      #overlay { position: absolute; left: 10px; top: 10px; z-index: 2; color: #fff; }
-      #startHint { background: rgba(0,0,0,0.6); padding: 10px 14px; border-radius: 8px; font-size: 14px; line-height: 1.4; }
-      canvas { display: block; width: 100vw; height: 100vh; }
-      #loading { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.8); color: #fff; font-family: Arial, sans-serif; z-index: 10; }
-    </style>
-  </head>
-  <body>
-    <div id="loading">Loading your Vesak city... Please wait.</div>
-    <div id="overlay"><div id="startHint">Tap the AR button to view on your floor, or wait for the city preview to appear.</div></div>
-    <script type="module">
-      import * as THREE from 'https://unpkg.com/three@0.150.1/build/three.module.js';
-      import { ARButton } from 'https://unpkg.com/three@0.150.1/examples/jsm/webxr/ARButton.js';
-      // No external model loader: using procedural fallbacks only
-      import { EffectComposer } from 'https://unpkg.com/three@0.150.1/examples/jsm/postprocessing/EffectComposer.js';
-      import { RenderPass } from 'https://unpkg.com/three@0.150.1/examples/jsm/postprocessing/RenderPass.js';
-      import { UnrealBloomPass } from 'https://unpkg.com/three@0.150.1/examples/jsm/postprocessing/UnrealBloomPass.js';
-      import { Water } from 'https://unpkg.com/three@0.150.1/examples/jsm/objects/Water.js';
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>AR Vesak City</title>
+  <script src="https://cdn.jsdelivr.net/npm/aframe@1.5.0/dist/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/ar.js@2.2.2/aframe/build/aframe-ar.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { overflow: hidden; font-family: sans-serif; background: #0a0a1a; }
 
-      let composer, bloomPass;
-      let water;
-      let controller, reticle;
-      let hitTestSource = null;
-      let hitTestSourceRequested = false;
-      let world = null;
-      let sessionStartTime = null;
-      const flyingLanterns = [];
-      const pathLights = [];
-      const particleGroups = [];
-      const forwardVector = new THREE.Vector3();
-      // Ensure renderer/scene/camera are declared (module strict mode requires declarations)
-      let renderer, scene, camera;
+    #splash {
+      position: absolute; inset: 0; z-index: 100;
+      background: linear-gradient(180deg, #0a0a2a 0%, #1a0a3a 50%, #0d1a0d 100%);
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      color: #fff; text-align: center; padding: 2rem;
+    }
+    #splash h1 {
+      font-size: 2rem; font-weight: 300; letter-spacing: 0.15em;
+      color: #ffd700; margin-bottom: 0.5rem;
+    }
+    #splash .sub { font-size: 0.95rem; color: #c9b0ff; margin-bottom: 2.5rem; letter-spacing: 0.08em; }
+    #splash .features {
+      display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin-bottom: 2.5rem;
+    }
+    #splash .feat {
+      background: rgba(255,215,0,0.1); border: 1px solid rgba(255,215,0,0.3);
+      border-radius: 20px; padding: 6px 16px; font-size: 0.8rem; color: #ffd700;
+    }
+    #launch-btn {
+      background: #ffd700; color: #1a0a3a; border: none; border-radius: 30px;
+      padding: 14px 40px; font-size: 1rem; font-weight: 600; cursor: pointer;
+      letter-spacing: 0.05em; transition: transform 0.2s;
+    }
+    #launch-btn:hover { transform: scale(1.05); }
+    .lotus-deco { font-size: 2.5rem; margin-bottom: 1rem; }
 
-      // We will not use external GLTF models. Use procedural placeholders/fallbacks only.
-      function cloneModel(_key, fallback) {
-        return fallback ? fallback() : new THREE.Group();
-      }
+    #mode-bar {
+      position: absolute; bottom: 0; left: 0; right: 0; z-index: 50;
+      background: rgba(10,10,26,0.85); backdrop-filter: blur(8px);
+      display: none; padding: 12px 16px;
+      flex-direction: row; align-items: center; justify-content: space-between; gap: 8px;
+    }
+    #mode-bar.visible { display: flex; }
+    .mode-btn {
+      flex: 1; background: rgba(255,215,0,0.12); border: 1px solid rgba(255,215,0,0.4);
+      color: #ffd700; border-radius: 20px; padding: 8px 4px; font-size: 0.72rem;
+      cursor: pointer; text-align: center; transition: background 0.2s;
+    }
+    .mode-btn.active { background: #ffd700; color: #1a0a3a; font-weight: 600; }
+    .mode-btn:hover:not(.active) { background: rgba(255,215,0,0.22); }
 
-      function getLotusModel(size = 1) {
-        const key = Math.random() < 0.5 ? 'lotus1' : 'lotus2';
-        const flower = cloneModel(key, () => createLotusFlower(size));
-        flower.scale.multiplyScalar(size);
-        return flower;
-      }
+    #info-toast {
+      position: absolute; top: 16px; left: 50%; transform: translateX(-50%);
+      background: rgba(10,10,26,0.88); color: #ffd700; border: 1px solid rgba(255,215,0,0.4);
+      border-radius: 20px; padding: 8px 20px; font-size: 0.8rem; z-index: 60;
+      display: none; text-align: center; white-space: nowrap;
+    }
+    #info-toast.visible { display: block; }
+  </style>
+</head>
+<body>
 
-      function getLotusLantern() {
-        return cloneModel('lotusLantern', () => createLantern());
-      }
+<div id="splash">
+  <div class="lotus-deco">&#x1F338;</div>
+  <h1>Vesak AR City</h1>
+  <p class="sub">Suba Vesak Wewa &bull; Walk the Sacred Path</p>
+  <div class="features">
+    <span class="feat">Lotus Flower Path</span>
+    <span class="feat">Buddha Statues</span>
+    <span class="feat">Sri Lanka Stupa</span>
+    <span class="feat">Vesak Lanterns</span>
+    <span class="feat">Flying Lanterns</span>
+    <span class="feat">AR + 3D Mode</span>
+  </div>
+  <button id="launch-btn" onclick="launchAR()">Enter Vesak City</button>
+</div>
 
-      function getVesakLantern() {
-        const lantern = cloneModel('vesakLantern', () => createSkyLantern());
-        lantern.scale.setScalar(0.9);
-        return lantern;
-      }
+<div id="info-toast">Tap & drag to look around &bull; Walk forward to explore</div>
+<div id="mode-bar">
+  <div class="mode-btn active" id="btn-ar" onclick="setMode('ar')">AR Camera</div>
+  <div class="mode-btn" id="btn-3d" onclick="setMode('3d')">3D Scene</div>
+  <div class="mode-btn" id="btn-night" onclick="setMode('night')">Night Mode</div>
+  <div class="mode-btn" id="btn-info" onclick="sendPrompt('Tell me about Vesak festival and these sacred places')">About Vesak ↗</div>
+</div>
 
-      init();
-      animate();
+<a-scene
+  id="main-scene"
+  embedded
+  style="display:none; width:100vw; height:100vh;"
+  renderer="antialias: true; colorManagement: true;"
+  loading-screen="enabled: false"
+  vr-mode-ui="enabled: true"
+  arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: false; displayWidth: 1280; displayHeight: 720;"
+>
 
-      function init() {
-        renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-        renderer.setPixelRatio(window.devicePixelRatio);
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.toneMapping = THREE.ACESFilmicToneMapping;
-        renderer.outputEncoding = THREE.sRGBEncoding;
-        renderer.xr.enabled = true;
-        renderer.xr.setReferenceSpaceType('local-floor');
-        document.body.appendChild(renderer.domElement);
+  <a-assets timeout="30000">
+    <a-asset-item id="buddha1"  src="https://raw.githubusercontent.com/ThinukaVinjaya/vesakmodels/main/budha_statue.glb"></a-asset-item>
+    <a-asset-item id="buddha2"  src="https://raw.githubusercontent.com/ThinukaVinjaya/vesakmodels/main/stone_buddha_statue.glb"></a-asset-item>
+    <a-asset-item id="lotus1"   src="https://raw.githubusercontent.com/ThinukaVinjaya/vesakmodels/main/lotus1.glb"></a-asset-item>
+    <a-asset-item id="lotus2"   src="https://raw.githubusercontent.com/ThinukaVinjaya/vesakmodels/main/lotus_flower2.glb"></a-asset-item>
+    <a-asset-item id="lotuslan" src="https://raw.githubusercontent.com/ThinukaVinjaya/vesakmodels/main/lotus_lanttern.glb"></a-asset-item>
+    <a-asset-item id="vesaklan" src="https://raw.githubusercontent.com/ThinukaVinjaya/vesakmodels/main/vesak_lanterns.glb"></a-asset-item>
+    <a-asset-item id="stupa"    src="https://raw.githubusercontent.com/ThinukaVinjaya/vesakmodels/main/sthupa_srilanka.glb"></a-asset-item>
+  </a-assets>
 
-        scene = new THREE.Scene();
-        camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 50);
+  <a-camera id="cam" look-controls="touchEnabled: true" wasd-controls="acceleration:20" position="0 1.6 0" fov="80">
+    <a-entity cursor="fuse: false; rayOrigin: mouse" raycaster="near: 0.1; far: 50;"></a-entity>
+  </a-camera>
 
-        // Setup Post-processing
-        const renderScene = new RenderPass(scene, camera);
-        bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.4, 0.85);
-        bloomPass.threshold = 0.21;
-        bloomPass.strength = 1.2;
-        bloomPass.radius = 0.55;
+  <!-- SKY -->
+  <a-sky id="sky" color="#0a0a1e"></a-sky>
 
-        composer = new EffectComposer(renderer);
-        composer.addPass(renderScene);
-        composer.addPass(bloomPass);
+  <!-- STARS -->
+  <a-entity id="stars" position="0 0 0"></a-entity>
 
-        const light = new THREE.HemisphereLight(0xffffff, 0xbbbbff, 1);
-        light.position.set(0.5, 1, 0.25);
-        scene.add(light);
+  <!-- AMBIENT + DIRECTIONAL LIGHT -->
+  <a-entity light="type: ambient; color: #b0a0ff; intensity: 0.6"></a-entity>
+  <a-entity light="type: directional; color: #ffe4a0; intensity: 1.2" position="5 10 -5"></a-entity>
+  <a-entity light="type: point; color: #ffd700; intensity: 0.8; distance: 30" position="0 4 -8"></a-entity>
 
-        reticle = new THREE.Mesh(
-          new THREE.RingGeometry(0.12, 0.16, 32).rotateX(-Math.PI / 2),
-          new THREE.MeshBasicMaterial({ color: 0x00ffcc })
-        );
-        reticle.matrixAutoUpdate = false;
-        reticle.visible = false;
-        scene.add(reticle);
+  <!-- GROUND PLANE — stone path texture via color -->
+  <a-plane id="ground" rotation="-90 0 0" width="60" height="80" color="#2a3d1a" position="0 0 -20"></a-plane>
 
-        controller = renderer.xr.getController(0);
-        controller.addEventListener('select', onSelect);
-        scene.add(controller);
+  <!-- CENTRAL PATH — golden stone tiles -->
+  <a-plane rotation="-90 0 0" width="4" height="80" color="#c8a85a" position="0 0.01 -20"
+    material="roughness:0.9; metalness:0.1"></a-plane>
+  <a-plane rotation="-90 0 0" width="3.6" height="80" color="#d4b870" position="0 0.015 -20"
+    material="roughness:0.95"></a-plane>
 
-        try {
-          const arButton = ARButton.createButton(renderer, { requiredFeatures: ['hit-test'], optionalFeatures: ['local-floor'] });
-          document.body.appendChild(arButton);
-        } catch (err) {
-          console.warn('ARButton unavailable, using fallback view:', err);
-        }
+  <!-- PATH EDGE LINES -->
+  <a-box width="0.08" height="0.05" depth="80" color="#8B6914" position="-2 0.02 -20"></a-box>
+  <a-box width="0.08" height="0.05" depth="80" color="#8B6914" position="2 0.02 -20"></a-box>
 
-        // intentionally not loading external GLTFs; using procedural geometry only
+  <!-- =====================================================
+       ZONE 1: ENTRANCE LOTUS PATH (z: 0 to -20)
+       Lotus flowers line both sides of the path
+  ====================================================== -->
 
-        renderer.xr.addEventListener('sessionstart', () => {
-          sessionStartTime = null;
-        });
+  <!-- LEFT SIDE LOTUS FLOWERS (z-axis, alternating lotus1 and lotus2) -->
+  <a-entity gltf-model="#lotus1" position="-3.5 0 -2"  scale="0.4 0.4 0.4" animation="property: rotation; to: 0 360 0; dur: 12000; loop: true; easing: linear"></a-entity>
+  <a-entity gltf-model="#lotus2" position="-3.5 0 -4"  scale="0.35 0.35 0.35" animation="property: rotation; to: 0 360 0; dur: 14000; loop: true; easing: linear"></a-entity>
+  <a-entity gltf-model="#lotus1" position="-4 0 -6"    scale="0.45 0.45 0.45" animation="property: rotation; to: 0 360 0; dur: 11000; loop: true; easing: linear"></a-entity>
+  <a-entity gltf-model="#lotus2" position="-3.5 0 -8"  scale="0.38 0.38 0.38" animation="property: rotation; to: 0 360 0; dur: 13000; loop: true; easing: linear"></a-entity>
+  <a-entity gltf-model="#lotus1" position="-4 0 -10"   scale="0.42 0.42 0.42" animation="property: rotation; to: 0 360 0; dur: 10000; loop: true; easing: linear"></a-entity>
+  <a-entity gltf-model="#lotus2" position="-3.5 0 -12" scale="0.36 0.36 0.36" animation="property: rotation; to: 0 360 0; dur: 15000; loop: true; easing: linear"></a-entity>
+  <a-entity gltf-model="#lotus1" position="-4 0 -14"   scale="0.44 0.44 0.44" animation="property: rotation; to: 0 360 0; dur: 12500; loop: true; easing: linear"></a-entity>
+  <a-entity gltf-model="#lotus2" position="-3.5 0 -16" scale="0.37 0.37 0.37" animation="property: rotation; to: 0 360 0; dur: 11500; loop: true; easing: linear"></a-entity>
+  <a-entity gltf-model="#lotus1" position="-4 0 -18"   scale="0.43 0.43 0.43" animation="property: rotation; to: 0 360 0; dur: 13500; loop: true; easing: linear"></a-entity>
 
-        function hideLoading() {
-          const loadingEl = document.getElementById('loading');
-          if (loadingEl) loadingEl.style.display = 'none';
-        }
+  <!-- RIGHT SIDE LOTUS FLOWERS -->
+  <a-entity gltf-model="#lotus2" position="3.5 0 -2"  scale="0.4 0.4 0.4" animation="property: rotation; to: 0 -360 0; dur: 12000; loop: true; easing: linear"></a-entity>
+  <a-entity gltf-model="#lotus1" position="3.5 0 -4"  scale="0.35 0.35 0.35" animation="property: rotation; to: 0 -360 0; dur: 14000; loop: true; easing: linear"></a-entity>
+  <a-entity gltf-model="#lotus2" position="4 0 -6"    scale="0.45 0.45 0.45" animation="property: rotation; to: 0 -360 0; dur: 11000; loop: true; easing: linear"></a-entity>
+  <a-entity gltf-model="#lotus1" position="3.5 0 -8"  scale="0.38 0.38 0.38" animation="property: rotation; to: 0 -360 0; dur: 13000; loop: true; easing: linear"></a-entity>
+  <a-entity gltf-model="#lotus2" position="4 0 -10"   scale="0.42 0.42 0.42" animation="property: rotation; to: 0 -360 0; dur: 10000; loop: true; easing: linear"></a-entity>
+  <a-entity gltf-model="#lotus1" position="3.5 0 -12" scale="0.36 0.36 0.36" animation="property: rotation; to: 0 -360 0; dur: 15000; loop: true; easing: linear"></a-entity>
+  <a-entity gltf-model="#lotus2" position="4 0 -14"   scale="0.44 0.44 0.44" animation="property: rotation; to: 0 -360 0; dur: 12500; loop: true; easing: linear"></a-entity>
+  <a-entity gltf-model="#lotus1" position="3.5 0 -16" scale="0.37 0.37 0.37" animation="property: rotation; to: 0 -360 0; dur: 11500; loop: true; easing: linear"></a-entity>
+  <a-entity gltf-model="#lotus2" position="4 0 -18"   scale="0.43 0.43 0.43" animation="property: rotation; to: 0 -360 0; dur: 13500; loop: true; easing: linear"></a-entity>
 
-        // Hide loading and build a preview even if AR does not start.
-        setTimeout(() => {
-          if (!world) {
-            placeScene();
-          }
-          hideLoading();
-        }, 1000);
+  <!-- EXTRA LOTUS CLUSTERS deeper in path edges (smaller fill-in) -->
+  <a-entity gltf-model="#lotus1" position="-5 0 -3"  scale="0.25 0.25 0.25" animation="property: rotation; to: 0 360 0; dur: 9000; loop: true; easing: linear"></a-entity>
+  <a-entity gltf-model="#lotus2" position="-5 0 -7"  scale="0.22 0.22 0.22" animation="property: rotation; to: 0 360 0; dur: 16000; loop: true; easing: linear"></a-entity>
+  <a-entity gltf-model="#lotus1" position="-5 0 -11" scale="0.28 0.28 0.28" animation="property: rotation; to: 0 360 0; dur: 10500; loop: true; easing: linear"></a-entity>
+  <a-entity gltf-model="#lotus2" position="5 0 -3"   scale="0.25 0.25 0.25" animation="property: rotation; to: 0 -360 0; dur: 9000; loop: true; easing: linear"></a-entity>
+  <a-entity gltf-model="#lotus1" position="5 0 -7"   scale="0.22 0.22 0.22" animation="property: rotation; to: 0 -360 0; dur: 16000; loop: true; easing: linear"></a-entity>
+  <a-entity gltf-model="#lotus2" position="5 0 -11"  scale="0.28 0.28 0.28" animation="property: rotation; to: 0 -360 0; dur: 10500; loop: true; easing: linear"></a-entity>
 
-        window.addEventListener('resize', onWindowResize);
-        window.addEventListener('orientationchange', onWindowResize);
-        window.addEventListener('load', () => setTimeout(() => {
-          const loadingEl = document.getElementById('loading');
-          if (loadingEl) loadingEl.style.display = 'none';
-        }, 600));
-      }
+  <!-- LOTUS POND GLOW LIGHTS along path -->
+  <a-entity light="type: point; color: #ff80b0; intensity: 0.4; distance: 5" position="-3.5 0.3 -5"></a-entity>
+  <a-entity light="type: point; color: #ff80b0; intensity: 0.4; distance: 5" position="3.5 0.3 -5"></a-entity>
+  <a-entity light="type: point; color: #ffb0d0; intensity: 0.35; distance: 5" position="-3.5 0.3 -12"></a-entity>
+  <a-entity light="type: point; color: #ffb0d0; intensity: 0.35; distance: 5" position="3.5 0.3 -12"></a-entity>
 
-      function onWindowResize() {
-        camera.aspect = window.innerWidth / window.innerHeight;
-        camera.updateProjectionMatrix();
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        if (renderer.domElement) {
-          renderer.domElement.style.width = '100%';
-          renderer.domElement.style.height = '100%';
-        }
-      }
+  <!-- =====================================================
+       ZONE 2: BUDDHA STATUE — LEFT SIDE (z: -20 to -28)
+  ====================================================== -->
 
-      function onSelect() {
-        if (!world) {
-          placeScene();
-        }
-      }
+  <!-- Buddha pedestal / altar platform -->
+  <a-box position="-6 0.3 -22" width="4" height="0.6" depth="4" color="#c8a040"
+    material="roughness:0.8"></a-box>
+  <a-box position="-6 0.65 -22" width="3.6" height="0.1" depth="3.6" color="#e8c060"
+    material="roughness:0.6"></a-box>
 
-      function placeScene() {
-        world = new THREE.Group();
-        if (reticle.visible) {
-          world.position.setFromMatrixPosition(reticle.matrix);
-          world.position.y = 0;
-          world.quaternion.setFromRotationMatrix(reticle.matrix);
-        } else {
-          camera.getWorldDirection(forwardVector);
-          forwardVector.multiplyScalar(1.2);
-          world.position.copy(camera.position).add(forwardVector);
-          world.position.y = 0;
-          const flatRotation = new THREE.Euler(0, camera.rotation.y, 0, 'YXZ');
-          world.quaternion.setFromEuler(flatRotation);
-        }
-        scene.add(world);
-        addGround(world);
+  <!-- Main Buddha statue on pedestal -->
+  <a-entity gltf-model="#buddha1" position="-6 0.7 -22" scale="1.2 1.2 1.2" rotation="0 90 0"></a-entity>
 
-        addLotusPath(world, 10, 2.7, 1.2);
-        addLotusPath(world, 10, 5.2, 1.2, 0.4);
-        addLotusClusters(world);
-        addStupa(world, 0, 0, -6);
-        addTemple(world, 4, 0, -6);
-        addBuddha(world, -4, 0, -6, 'buddha');
-        addBuddha(world, 4, 0, -6, 'stoneBuddha');
-        addPathLanterns(world);
-        addGardenLights(world);
-        addFlyingLanterns(world, 14);
-        addFireflyGlow(world);
+  <!-- Second smaller stone Buddha a bit further -->
+  <a-entity gltf-model="#buddha2" position="-7 0 -27" scale="0.8 0.8 0.8" rotation="0 60 0"></a-entity>
 
-        const loadingEl = document.getElementById('loading');
-        if (loadingEl) loadingEl.style.display = 'none';
-        const startHint = document.getElementById('startHint');
-        if (startHint) startHint.style.display = 'none';
-      }
+  <!-- Small altar lotus beside buddha -->
+  <a-entity gltf-model="#lotus1" position="-4.5 0.7 -21" scale="0.2 0.2 0.2" animation="property: rotation; to: 0 360 0; dur: 8000; loop: true; easing: linear"></a-entity>
+  <a-entity gltf-model="#lotus2" position="-7.5 0.7 -21" scale="0.2 0.2 0.2" animation="property: rotation; to: 0 360 0; dur: 9000; loop: true; easing: linear"></a-entity>
 
-      function addLotusPath(parent, count, xOffset, spacing, radius = 0.4) {
-        for (let i = 0; i < count; i++) {
-          const z = -i * spacing - 1.2;
-          const scale = 0.5 + Math.random() * 0.4;
-          const flower = getLotusModel(scale);
-          flower.position.set(xOffset, 0.02, z + (Math.random() - 0.5) * 0.2);
-          flower.rotation.y = Math.random() * Math.PI * 2;
-          parent.add(flower);
-        }
-      }
+  <!-- Golden glow around buddha -->
+  <a-entity light="type: point; color: #ffd700; intensity: 1.2; distance: 10" position="-6 2.5 -22"></a-entity>
 
-      function createLotusFlower(size = 1) {
-        const group = new THREE.Group();
-        const petalMat = new THREE.MeshStandardMaterial({ color: 0xff7fbf, roughness: 0.6, metalness: 0.1 });
-        for (let i = 0; i < 8; i++) {
-          const petal = new THREE.Mesh(new THREE.ConeGeometry(0.15 * size, 0.5 * size, 6), petalMat);
-          petal.position.y = 0.12 * size;
-          petal.rotation.x = Math.PI / 2;
-          petal.rotation.z = (i / 8) * Math.PI * 2;
-          petal.scale.set(1, 1, 0.4);
-          group.add(petal);
-        }
-        const center = new THREE.Mesh(new THREE.SphereGeometry(0.12 * size, 8, 8), new THREE.MeshStandardMaterial({ color: 0xffe070 }));
-        center.position.y = 0.08 * size;
-        group.add(center);
-        return group;
-      }
+  <!-- Incense smoke effect (rising particle-like spheres) -->
+  <a-sphere position="-5.5 1.5 -22" radius="0.06" color="#fffce0" opacity="0.3"
+    animation="property: position; to: -5.5 4 -22; dur: 4000; loop: true; easing: easeInQuad"
+    animation__fade="property: material.opacity; from: 0.3; to: 0; dur: 4000; loop: true"></a-sphere>
+  <a-sphere position="-6.5 1.5 -22" radius="0.05" color="#fffce0" opacity="0.25"
+    animation="property: position; to: -6.5 3.8 -22; dur: 4500; loop: true; easing: easeInQuad; delay: 1000"
+    animation__fade="property: material.opacity; from: 0.25; to: 0; dur: 4500; loop: true; delay: 1000"></a-sphere>
 
-      function addTemple(parent, x, y, z) {
-        const temple = new THREE.Group();
-        temple.position.set(x, y, z);
+  <!-- Decorative flags / banners beside buddha -->
+  <a-box position="-4 0 -20" width="0.08" height="5" depth="0.08" color="#8B4513"></a-box>
+  <a-plane position="-4 4.5 -20" width="1.2" height="0.8" color="#ffd700" rotation="0 -90 0"></a-plane>
+  <a-box position="-8 0 -20" width="0.08" height="5" depth="0.08" color="#8B4513"></a-box>
+  <a-plane position="-8 4.5 -20" width="1.2" height="0.8" color="#e8336d" rotation="0 90 0"></a-plane>
 
-        const base = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.4, 2.8), new THREE.MeshStandardMaterial({ color: 0x7b4a20, roughness: 0.8 }));
-        base.position.y = 0.2;
-        temple.add(base);
+  <!-- =====================================================
+       ZONE 2: STUPA TEMPLE — RIGHT SIDE (z: -22 to -30)
+  ====================================================== -->
 
-        const body = new THREE.Mesh(new THREE.BoxGeometry(1.8, 1.1, 2.2), new THREE.MeshStandardMaterial({ color: 0xe0c39a }));
-        body.position.y = 0.85;
-        temple.add(body);
+  <!-- Stupa base platform (tiered) -->
+  <a-box position="7 0.5 -24" width="8" height="1" depth="8" color="#c8b87a" material="roughness:0.9"></a-box>
+  <a-box position="7 1.1 -24" width="6" height="0.3" depth="6" color="#d4c488" material="roughness:0.8"></a-box>
+  <a-box position="7 1.4 -24" width="5" height="0.2" depth="5" color="#ddd098" material="roughness:0.7"></a-box>
 
-        const roof1 = new THREE.Mesh(new THREE.ConeGeometry(1.4, 0.7, 4), new THREE.MeshStandardMaterial({ color: 0x8b0000 }));
-        roof1.position.y = 1.7;
-        roof1.rotation.y = Math.PI / 4;
-        temple.add(roof1);
+  <!-- Main Stupa model -->
+  <a-entity gltf-model="#stupa" position="7 1.6 -24" scale="1.5 1.5 1.5" rotation="0 -30 0"></a-entity>
 
-        const roof2 = new THREE.Mesh(new THREE.ConeGeometry(1.1, 0.5, 4), new THREE.MeshStandardMaterial({ color: 0xaa0000 }));
-        roof2.position.y = 2.15;
-        roof2.rotation.y = Math.PI / 4;
-        temple.add(roof2);
+  <!-- Stupa golden spire glow -->
+  <a-entity light="type: point; color: #ffd700; intensity: 1.5; distance: 15" position="7 6 -24"></a-entity>
 
-        const pillarMat = new THREE.MeshStandardMaterial({ color: 0xf0e0c0 });
-        for (let px of [-0.7, 0.7]) {
-          for (let pz of [-0.8, 0.8]) {
-            const pillar = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 1.2, 8), pillarMat);
-            pillar.position.set(px, 0.9, pz);
-            temple.add(pillar);
-          }
-        }
+  <!-- Lotus pond around stupa base -->
+  <a-entity gltf-model="#lotus1" position="4 1.6 -22" scale="0.3 0.3 0.3" animation="property: rotation; to: 0 360 0; dur: 10000; loop: true; easing: linear"></a-entity>
+  <a-entity gltf-model="#lotus2" position="10 1.6 -22" scale="0.28 0.28 0.28" animation="property: rotation; to: 0 -360 0; dur: 11000; loop: true; easing: linear"></a-entity>
+  <a-entity gltf-model="#lotus1" position="4 1.6 -26" scale="0.3 0.3 0.3" animation="property: rotation; to: 0 360 0; dur: 9500; loop: true; easing: linear"></a-entity>
+  <a-entity gltf-model="#lotus2" position="10 1.6 -26" scale="0.28 0.28 0.28" animation="property: rotation; to: 0 -360 0; dur: 12000; loop: true; easing: linear"></a-entity>
 
-        parent.add(temple);
-      }
+  <!-- Prayer flags on stupa area -->
+  <a-box position="4 0 -22"  width="0.06" height="6" depth="0.06" color="#8B4513"></a-box>
+  <a-box position="10 0 -22" width="0.06" height="6" depth="0.06" color="#8B4513"></a-box>
+  <a-box position="4 0 -26"  width="0.06" height="6" depth="0.06" color="#8B4513"></a-box>
+  <a-box position="10 0 -26" width="0.06" height="6" depth="0.06" color="#8B4513"></a-box>
+  <!-- Flag ropes (simulated with thin boxes) -->
+  <a-box position="7 5.8 -22" width="6.5" height="0.04" depth="0.04" color="#ffd700"></a-box>
+  <a-box position="7 5.5 -22" width="6.5" height="0.04" depth="0.04" color="#e8336d"></a-box>
 
-      function addStupa(parent, x, y, z) {
-        const stupa = cloneModel('sthupa', () => {
-          const placeholder = new THREE.Group();
-          const body = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 1.2, 2.4, 20), new THREE.MeshStandardMaterial({ color: 0xb5a58f, roughness: 0.7 }));
-          body.position.y = 1.2;
-          placeholder.add(body);
-          return placeholder;
-        });
-        stupa.position.set(x, y, z);
-        stupa.scale.setScalar(0.8);
-        parent.add(stupa);
-      }
+  <!-- =====================================================
+       ZONE 3: VESAK LANTERNS — BOTH SIDES OF PATH (z: -28 to -50)
+  ====================================================== -->
 
-      function addBuddha(parent, x, y, z, modelKey = 'buddha') {
-        const buddha = cloneModel(modelKey, () => {
-          const placeholder = new THREE.Group();
-          const pedestal = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.9, 0.28, 16), new THREE.MeshStandardMaterial({ color: 0x6d4b3b }));
-          pedestal.position.y = 0.14;
-          placeholder.add(pedestal);
-          const body = new THREE.Mesh(new THREE.SphereGeometry(0.5, 16, 12), new THREE.MeshStandardMaterial({ color: 0xf3e5ab }));
-          body.position.y = 0.8;
-          placeholder.add(body);
-          const head = new THREE.Mesh(new THREE.SphereGeometry(0.28, 12, 10), new THREE.MeshStandardMaterial({ color: 0xf5e7c0 }));
-          head.position.y = 1.45;
-          placeholder.add(head);
-          const halo = new THREE.Mesh(new THREE.RingGeometry(0.32, 0.42, 32), new THREE.MeshBasicMaterial({ color: 0xffdd66, side: THREE.DoubleSide }));
-          halo.position.y = 1.9;
-          halo.rotation.x = -0.2;
-          placeholder.add(halo);
-          return placeholder;
-        });
-        buddha.position.set(x, y, z);
-        buddha.scale.setScalar(0.9);
-        parent.add(buddha);
-      }
+  <!-- LEFT SIDE VESAK LANTERNS on poles -->
+  <a-box position="-2.8 0 -28" width="0.1" height="3.5" depth="0.1" color="#6B4423"></a-box>
+  <a-entity gltf-model="#vesaklan" position="-2.8 3.5 -28" scale="0.5 0.5 0.5"
+    animation="property: rotation; to: 0 360 0; dur: 8000; loop: true; easing: linear"></a-entity>
+  <a-entity light="type: point; color: #ffaa00; intensity: 0.6; distance: 6" position="-2.8 3.5 -28"></a-entity>
 
-      function addPathLanterns(parent) {
-        const lanternPositions = [ -2, 2, -1.4, 1.4, -2.6, 2.6, -1, 1 ];
-        let z = -2;
-        for (let i = 0; i < 10; i++) {
-          const side = lanternPositions[i % lanternPositions.length];
-          const lantern = getLotusLantern();
-          lantern.position.set(side, 0.5, z);
-          lantern.scale.setScalar(0.8);
-          parent.add(lantern);
+  <a-box position="-2.8 0 -32" width="0.1" height="3.5" depth="0.1" color="#6B4423"></a-box>
+  <a-entity gltf-model="#lotuslan" position="-2.8 3.5 -32" scale="0.5 0.5 0.5"
+    animation="property: rotation; to: 0 360 0; dur: 9000; loop: true; easing: linear"></a-entity>
+  <a-entity light="type: point; color: #ff6688; intensity: 0.6; distance: 6" position="-2.8 3.5 -32"></a-entity>
 
-          const pole = new THREE.Mesh(
-            new THREE.CylinderGeometry(0.04, 0.05, 2.2, 8),
-            new THREE.MeshStandardMaterial({ color: 0x613f27, roughness: 0.85 })
-          );
-          pole.position.set(side, 1.1, z);
-          parent.add(pole);
+  <a-box position="-2.8 0 -36" width="0.1" height="3.5" depth="0.1" color="#6B4423"></a-box>
+  <a-entity gltf-model="#vesaklan" position="-2.8 3.5 -36" scale="0.5 0.5 0.5"
+    animation="property: rotation; to: 0 360 0; dur: 7500; loop: true; easing: linear"></a-entity>
+  <a-entity light="type: point; color: #ffaa00; intensity: 0.6; distance: 6" position="-2.8 3.5 -36"></a-entity>
 
-          const light = lantern.children.find(obj => obj.type === 'PointLight');
-          pathLights.push({ light: light || new THREE.PointLight(0xffb060, 0.4, 3), phase: Math.random() * Math.PI * 2 });
-          z -= 1.7;
-        }
-      }
+  <a-box position="-2.8 0 -40" width="0.1" height="3.5" depth="0.1" color="#6B4423"></a-box>
+  <a-entity gltf-model="#lotuslan" position="-2.8 3.5 -40" scale="0.5 0.5 0.5"
+    animation="property: rotation; to: 0 -360 0; dur: 10000; loop: true; easing: linear"></a-entity>
+  <a-entity light="type: point; color: #ff6688; intensity: 0.6; distance: 6" position="-2.8 3.5 -40"></a-entity>
 
-      function createLantern() {
-        const group = new THREE.Group();
-        const body = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.14, 0.38, 12), new THREE.MeshStandardMaterial({ color: 0xff6633, emissive: 0xff9933, emissiveIntensity: 0.8, transparent: true, opacity: 0.92 }));
-        group.add(body);
-        const top = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.16, 12), new THREE.MeshStandardMaterial({ color: 0xcc3300 }));
-        top.position.y = 0.27;
-        group.add(top);
-        const bottom = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.14, 12), new THREE.MeshStandardMaterial({ color: 0xcc3300 }));
-        bottom.position.y = -0.27;
-        bottom.rotation.x = Math.PI;
-        group.add(bottom);
+  <a-box position="-2.8 0 -44" width="0.1" height="3.5" depth="0.1" color="#6B4423"></a-box>
+  <a-entity gltf-model="#vesaklan" position="-2.8 3.5 -44" scale="0.5 0.5 0.5"
+    animation="property: rotation; to: 0 360 0; dur: 8500; loop: true; easing: linear"></a-entity>
+  <a-entity light="type: point; color: #ffaa00; intensity: 0.6; distance: 6" position="-2.8 3.5 -44"></a-entity>
 
-        const glow = new THREE.PointLight(0xffb060, 0.8, 3);
-        group.add(glow);
+  <!-- RIGHT SIDE VESAK LANTERNS on poles -->
+  <a-box position="2.8 0 -28" width="0.1" height="3.5" depth="0.1" color="#6B4423"></a-box>
+  <a-entity gltf-model="#lotuslan" position="2.8 3.5 -28" scale="0.5 0.5 0.5"
+    animation="property: rotation; to: 0 -360 0; dur: 8000; loop: true; easing: linear"></a-entity>
+  <a-entity light="type: point; color: #ff6688; intensity: 0.6; distance: 6" position="2.8 3.5 -28"></a-entity>
 
-        return group;
-      }
+  <a-box position="2.8 0 -32" width="0.1" height="3.5" depth="0.1" color="#6B4423"></a-box>
+  <a-entity gltf-model="#vesaklan" position="2.8 3.5 -32" scale="0.5 0.5 0.5"
+    animation="property: rotation; to: 0 360 0; dur: 9000; loop: true; easing: linear"></a-entity>
+  <a-entity light="type: point; color: #ffaa00; intensity: 0.6; distance: 6" position="2.8 3.5 -32"></a-entity>
 
-      function addFlyingLanterns(parent, count) {
-        for (let i = 0; i < count; i++) {
-          const lantern = getVesakLantern();
-          lantern.position.set((Math.random() - 0.5) * 5, 0.6 + Math.random() * 0.4, -2 - Math.random() * 0.6);
-          lantern.userData = {
-            speed: 0.014 + Math.random() * 0.02,
-            driftX: (Math.random() - 0.5) * 0.0016,
-            driftZ: -0.0015 - Math.random() * 0.0011,
-            phase: Math.random() * Math.PI * 2
-          };
-          flyingLanterns.push(lantern);
-          parent.add(lantern);
-        }
-      }
+  <a-box position="2.8 0 -36" width="0.1" height="3.5" depth="0.1" color="#6B4423"></a-box>
+  <a-entity gltf-model="#lotuslan" position="2.8 3.5 -36" scale="0.5 0.5 0.5"
+    animation="property: rotation; to: 0 -360 0; dur: 7500; loop: true; easing: linear"></a-entity>
+  <a-entity light="type: point; color: #ff6688; intensity: 0.6; distance: 6" position="2.8 3.5 -36"></a-entity>
 
-      function createSkyLantern() {
-        const group = new THREE.Group();
-        const balloon = new THREE.Mesh(new THREE.SphereGeometry(0.18, 12, 10), new THREE.MeshStandardMaterial({ color: 0xffeb99, emissive: 0xffd36b, emissiveIntensity: 1.2, transparent: true, opacity: 0.86 }));
-        balloon.scale.set(1, 1.3, 1);
-        group.add(balloon);
-        const ring = new THREE.Mesh(new THREE.TorusGeometry(0.14, 0.02, 8, 24), new THREE.MeshStandardMaterial({ color: 0x7a4a2c }));
-        ring.rotation.x = Math.PI / 2;
-        ring.position.y = -0.24;
-        group.add(ring);
-        const flame = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.16, 8), new THREE.MeshStandardMaterial({ color: 0xffa533, emissive: 0xff7700, emissiveIntensity: 3 }));
-        flame.position.y = -0.17;
-        flame.rotation.x = Math.PI;
-        group.add(flame);
-        const light = new THREE.PointLight(0xffb060, 1.1, 4);
-        group.add(light);
+  <a-box position="2.8 0 -40" width="0.1" height="3.5" depth="0.1" color="#6B4423"></a-box>
+  <a-entity gltf-model="#vesaklan" position="2.8 3.5 -40" scale="0.5 0.5 0.5"
+    animation="property: rotation; to: 0 360 0; dur: 10000; loop: true; easing: linear"></a-entity>
+  <a-entity light="type: point; color: #ffaa00; intensity: 0.6; distance: 6" position="2.8 3.5 -40"></a-entity>
 
-        // delicate string
-        const stringGeo = new THREE.CylinderGeometry(0.005, 0.005, 0.4, 6);
-        const stringMat = new THREE.MeshStandardMaterial({ color: 0x5a3c2a, roughness: 0.85 });
-        const string = new THREE.Mesh(stringGeo, stringMat);
-        string.position.y = -0.2;
-        group.add(string);
+  <a-box position="2.8 0 -44" width="0.1" height="3.5" depth="0.1" color="#6B4423"></a-box>
+  <a-entity gltf-model="#lotuslan" position="2.8 3.5 -44" scale="0.5 0.5 0.5"
+    animation="property: rotation; to: 0 -360 0; dur: 8500; loop: true; easing: linear"></a-entity>
+  <a-entity light="type: point; color: #ff6688; intensity: 0.6; distance: 6" position="2.8 3.5 -44"></a-entity>
 
-        return group;
-      }
+  <!-- =====================================================
+       ZONE 4: FLYING SKY LANTERNS — Rise into the sky
+       Built from geometry (no model needed) — warm glowing
+       rice-paper lanterns with flame inside
+  ====================================================== -->
 
-      function addGround(parent) {
-        const ground = new THREE.Mesh(
-          new THREE.PlaneGeometry(16, 16),
-          new THREE.MeshStandardMaterial({ color: 0x0f261a, roughness: 0.95, transparent: true, opacity: 0.88 })
-        );
-        ground.rotation.x = -Math.PI / 2;
-        ground.position.y = 0;
-        parent.add(ground);
+  <!-- Flying lantern = cylinder body + cone top + cone bottom + inner glow sphere -->
+  <!-- Lantern 1 -->
+  <a-entity id="fly1" position="-4 2 -30"
+    animation="property: position; from: -4 2 -30; to: -5 22 -30; dur: 12000; loop: true; easing: easeInOutSine; dir: alternate">
+    <a-cylinder height="0.6" radius="0.25" color="#ffe8a0" opacity="0.75" material="transparent:true; side:double"></a-cylinder>
+    <a-cone height="0.35" radius-bottom="0.25" radius-top="0.02" color="#ffc060" opacity="0.6" position="0 0.45 0" material="transparent:true"></a-cone>
+    <a-cone height="0.25" radius-bottom="0.25" radius-top="0.02" color="#ffe0a0" opacity="0.6" position="0 -0.42 0" rotation="180 0 0" material="transparent:true"></a-cone>
+    <a-sphere radius="0.12" color="#ffcc00" opacity="0.9" position="0 0 0" material="emissive:#ff8800; emissiveIntensity:0.6"></a-sphere>
+    <a-entity light="type: point; color: #ffaa00; intensity: 0.5; distance: 4"></a-entity>
+  </a-entity>
 
-        const path = new THREE.Mesh(
-          new THREE.PlaneGeometry(4.8, 14),
-          new THREE.MeshStandardMaterial({ color: 0xa77f4f, roughness: 0.82 })
-        );
-        path.rotation.x = -Math.PI / 2;
-        path.position.set(0, 0.001, -4);
-        parent.add(path);
+  <!-- Lantern 2 -->
+  <a-entity id="fly2" position="5 3 -33"
+    animation="property: position; from: 5 3 -33; to: 7 24 -33; dur: 14000; loop: true; easing: easeInOutSine; dir: alternate; delay: 2000">
+    <a-cylinder height="0.6" radius="0.25" color="#ffd0b0" opacity="0.75" material="transparent:true; side:double"></a-cylinder>
+    <a-cone height="0.35" radius-bottom="0.25" radius-top="0.02" color="#ff9060" opacity="0.6" position="0 0.45 0" material="transparent:true"></a-cone>
+    <a-cone height="0.25" radius-bottom="0.25" radius-top="0.02" color="#ffd0a0" opacity="0.6" position="0 -0.42 0" rotation="180 0 0" material="transparent:true"></a-cone>
+    <a-sphere radius="0.12" color="#ff8800" opacity="0.9" position="0 0 0" material="emissive:#ff5500; emissiveIntensity:0.6"></a-sphere>
+    <a-entity light="type: point; color: #ff8800; intensity: 0.5; distance: 4"></a-entity>
+  </a-entity>
 
-        const edge = new THREE.Mesh(
-          new THREE.PlaneGeometry(0.12, 14),
-          new THREE.MeshStandardMaterial({ color: 0xf2d09c, roughness: 0.85 })
-        );
-        edge.rotation.x = -Math.PI / 2;
-        edge.position.set(2.45, 0.002, -4);
-        parent.add(edge);
-        const edge2 = edge.clone();
-        edge2.position.set(-2.45, 0.002, -4);
-        parent.add(edge2);
-      }
+  <!-- Lantern 3 -->
+  <a-entity id="fly3" position="-1 1.5 -38"
+    animation="property: position; from: -1 1.5 -38; to: 0 20 -36; dur: 10000; loop: true; easing: easeInOutSine; dir: alternate; delay: 4500">
+    <a-cylinder height="0.6" radius="0.25" color="#ffe0ff" opacity="0.75" material="transparent:true; side:double"></a-cylinder>
+    <a-cone height="0.35" radius-bottom="0.25" radius-top="0.02" color="#cc80ff" opacity="0.6" position="0 0.45 0" material="transparent:true"></a-cone>
+    <a-cone height="0.25" radius-bottom="0.25" radius-top="0.02" color="#f0c0ff" opacity="0.6" position="0 -0.42 0" rotation="180 0 0" material="transparent:true"></a-cone>
+    <a-sphere radius="0.12" color="#dd88ff" opacity="0.9" position="0 0 0" material="emissive:#aa44cc; emissiveIntensity:0.6"></a-sphere>
+    <a-entity light="type: point; color: #cc80ff; intensity: 0.5; distance: 4"></a-entity>
+  </a-entity>
 
-      function addLotusClusters(parent) {
-        const positions = [
-          [-1, 0, -9], [1, 0, -8], [-3, 0, -13], [3, 0, -12],
-          [-1.8, 0, -3], [1.8, 0, -2], [-4.2, 0, -6], [4.2, 0, -6]
-        ];
-        positions.forEach(([x, y, z]) => {
-          const cluster = new THREE.Group();
-          const count = 3 + Math.floor(Math.random() * 3);
-          for (let i = 0; i < count; i++) {
-            const angle = (i / count) * Math.PI * 2;
-            const petal = getLotusModel(0.4 + Math.random() * 0.3);
-            petal.position.set(Math.cos(angle) * 0.5, 0.02, Math.sin(angle) * 0.5);
-            petal.rotation.y = Math.random() * Math.PI * 2;
-            cluster.add(petal);
-          }
-          cluster.position.set(x, y, z);
-          parent.add(cluster);
-        });
-      }
+  <!-- Lantern 4 -->
+  <a-entity id="fly4" position="2 4 -42"
+    animation="property: position; from: 2 4 -42; to: 4 26 -44; dur: 13000; loop: true; easing: easeInOutSine; dir: alternate; delay: 1000">
+    <a-cylinder height="0.6" radius="0.25" color="#c0ffee" opacity="0.75" material="transparent:true; side:double"></a-cylinder>
+    <a-cone height="0.35" radius-bottom="0.25" radius-top="0.02" color="#40ccaa" opacity="0.6" position="0 0.45 0" material="transparent:true"></a-cone>
+    <a-cone height="0.25" radius-bottom="0.25" radius-top="0.02" color="#a0ffe0" opacity="0.6" position="0 -0.42 0" rotation="180 0 0" material="transparent:true"></a-cone>
+    <a-sphere radius="0.12" color="#80ffcc" opacity="0.9" position="0 0 0" material="emissive:#00ccaa; emissiveIntensity:0.6"></a-sphere>
+    <a-entity light="type: point; color: #40ffcc; intensity: 0.5; distance: 4"></a-entity>
+  </a-entity>
 
-      function addGardenLights(parent) {
-        const positions = [
-          [-1.8, 0.4, -1.2], [1.8, 0.4, -1.2], [-3.2, 0.4, -5], [3.2, 0.4, -5]
-        ];
-        positions.forEach(([x, y, z]) => {
-          const orb = new THREE.Mesh(
-            new THREE.SphereGeometry(0.12, 10, 10),
-            new THREE.MeshStandardMaterial({ color: 0xffd580, emissive: 0xffd150, emissiveIntensity: 0.9, transparent: true, opacity: 0.9 })
-          );
-          orb.position.set(x, y, z);
-          parent.add(orb);
-          const light = new THREE.PointLight(0xffd580, 0.7, 3);
-          light.position.set(x, y, z);
-          parent.add(light);
-          pathLights.push({ light, phase: Math.random() * Math.PI * 2 });
-        });
-      }
+  <!-- Lantern 5 -->
+  <a-entity id="fly5" position="-6 1 -35"
+    animation="property: position; from: -6 1 -35; to: -8 23 -38; dur: 11500; loop: true; easing: easeInOutSine; dir: alternate; delay: 3000">
+    <a-cylinder height="0.6" radius="0.25" color="#fff0c0" opacity="0.75" material="transparent:true; side:double"></a-cylinder>
+    <a-cone height="0.35" radius-bottom="0.25" radius-top="0.02" color="#ffcc40" opacity="0.6" position="0 0.45 0" material="transparent:true"></a-cone>
+    <a-cone height="0.25" radius-bottom="0.25" radius-top="0.02" color="#ffe880" opacity="0.6" position="0 -0.42 0" rotation="180 0 0" material="transparent:true"></a-cone>
+    <a-sphere radius="0.12" color="#ffd700" opacity="0.9" position="0 0 0" material="emissive:#cc9900; emissiveIntensity:0.6"></a-sphere>
+    <a-entity light="type: point; color: #ffd700; intensity: 0.5; distance: 4"></a-entity>
+  </a-entity>
 
-      function addFireflyGlow(parent) {
-        const group = new THREE.Group();
-        for (let i = 0; i < 24; i++) {
-          const firefly = new THREE.Mesh(
-            new THREE.SphereGeometry(0.04, 8, 8),
-            new THREE.MeshStandardMaterial({ color: 0xffe7aa, emissive: 0xffd680, emissiveIntensity: 1.2, transparent: true, opacity: 0.9 })
-          );
-          firefly.position.set((Math.random() - 0.5) * 6, 0.2 + Math.random() * 1.6, -1 - Math.random() * 8);
-          group.add(firefly);
-        }
-        parent.add(group);
-        particleGroups.push(group);
-      }
+  <!-- Lantern 6 -->
+  <a-entity id="fly6" position="8 2 -36"
+    animation="property: position; from: 8 2 -36; to: 10 25 -40; dur: 15000; loop: true; easing: easeInOutSine; dir: alternate; delay: 5500">
+    <a-cylinder height="0.6" radius="0.25" color="#ffc8e0" opacity="0.75" material="transparent:true; side:double"></a-cylinder>
+    <a-cone height="0.35" radius-bottom="0.25" radius-top="0.02" color="#ff6090" opacity="0.6" position="0 0.45 0" material="transparent:true"></a-cone>
+    <a-cone height="0.25" radius-bottom="0.25" radius-top="0.02" color="#ffaac8" opacity="0.6" position="0 -0.42 0" rotation="180 0 0" material="transparent:true"></a-cone>
+    <a-sphere radius="0.12" color="#ff80b0" opacity="0.9" position="0 0 0" material="emissive:#cc3366; emissiveIntensity:0.6"></a-sphere>
+    <a-entity light="type: point; color: #ff80b0; intensity: 0.5; distance: 4"></a-entity>
+  </a-entity>
 
-      function animate() {
-        renderer.setAnimationLoop(render);
-      }
+  <!-- Lantern 7 — far distance high up -->
+  <a-entity id="fly7" position="1 8 -45"
+    animation="property: position; from: 1 8 -45; to: -2 30 -45; dur: 9000; loop: true; easing: easeInOutSine; dir: alternate; delay: 7000">
+    <a-cylinder height="0.5" radius="0.2" color="#ffe8a0" opacity="0.65" material="transparent:true; side:double"></a-cylinder>
+    <a-cone height="0.3" radius-bottom="0.2" radius-top="0.02" color="#ffcc60" opacity="0.5" position="0 0.4 0" material="transparent:true"></a-cone>
+    <a-sphere radius="0.1" color="#ffcc00" opacity="0.8" position="0 0 0" material="emissive:#ff8800; emissiveIntensity:0.5"></a-sphere>
+    <a-entity light="type: point; color: #ffcc00; intensity: 0.3; distance: 3"></a-entity>
+  </a-entity>
 
-      function render(timestamp, frame) {
-        if (frame) {
-          const session = renderer.xr.getSession();
-          const referenceSpace = renderer.xr.getReferenceSpace();
-          if (!sessionStartTime && session) {
-            sessionStartTime = timestamp;
-          }
-          if (!hitTestSourceRequested && session) {
-            session.requestReferenceSpace('viewer').then((refSpace) => {
-              session.requestHitTestSource({ space: refSpace }).then((source) => { hitTestSource = source; });
-            });
-            session.addEventListener('end', () => {
-              hitTestSourceRequested = false;
-              hitTestSource = null;
-            });
-            hitTestSourceRequested = true;
-          }
-          if (hitTestSource) {
-            const hitTestResults = frame.getHitTestResults(hitTestSource);
-            if (hitTestResults.length) {
-              const hit = hitTestResults[0];
-              const pose = hit.getPose(referenceSpace);
-              reticle.visible = true;
-              reticle.matrix.fromArray(pose.transform.matrix);
+  <!-- Lantern 8 — tiny far distant -->
+  <a-entity id="fly8" position="-3 12 -50"
+    animation="property: position; from: -3 12 -50; to: -5 35 -52; dur: 18000; loop: true; easing: easeInOutSine; dir: alternate; delay: 2500">
+    <a-cylinder height="0.4" radius="0.16" color="#fff0e0" opacity="0.6" material="transparent:true; side:double"></a-cylinder>
+    <a-sphere radius="0.08" color="#ffc060" opacity="0.7" position="0 0 0" material="emissive:#ff6600; emissiveIntensity:0.4"></a-sphere>
+    <a-entity light="type: point; color: #ffaa44; intensity: 0.25; distance: 3"></a-entity>
+  </a-entity>
 
-              if (!world) {
-                placeScene();
-              }
-            } else {
-              reticle.visible = false;
-            }
-          }
+  <!-- =====================================================
+       ZONE 5: FINAL SHRINE at end of path (z: -50)
+       Buddha + Stupa together as the grand finale
+  ====================================================== -->
 
-          if (!world && session && sessionStartTime !== null && timestamp - sessionStartTime > 3000) {
-            placeScene();
-          }
-        }
+  <!-- Grand finale platform -->
+  <a-box position="0 0.5 -52" width="12" height="1" depth="8" color="#d4c070" material="roughness:0.8"></a-box>
+  <a-box position="0 1.1 -52" width="10" height="0.3" depth="6" color="#e0cc88" material="roughness:0.7"></a-box>
 
-        flyingLanterns.forEach((lantern) => {
-          lantern.position.y += lantern.userData.speed;
-          lantern.position.x += lantern.userData.driftX + Math.sin(timestamp * 0.001 + lantern.userData.phase) * 0.0007;
-          lantern.position.z += lantern.userData.driftZ;
-          lantern.rotation.y += 0.004;
-          lantern.rotation.z = Math.sin(timestamp * 0.001 + lantern.userData.phase) * 0.05;
-          if (lantern.position.y > 10) {
-            lantern.position.y = 0.7;
-            lantern.position.x = (Math.random() - 0.5) * 5;
-            lantern.position.z = -2 - Math.random() * 10;
-          }
-        });
+  <!-- Central final Buddha -->
+  <a-entity gltf-model="#buddha1" position="0 1.4 -52" scale="2 2 2" rotation="0 180 0"></a-entity>
+  <a-entity light="type: point; color: #ffd700; intensity: 2; distance: 20" position="0 5 -52"></a-entity>
 
-        pathLights.forEach(({ light, phase }) => {
-          light.intensity = 0.6 + 0.25 * Math.sin(timestamp * 0.006 + phase);
-          if (light.color) light.color.setHSL(0.09, 0.9, 0.55 + 0.12 * Math.sin(timestamp * 0.01 + phase));
-        });
+  <!-- Flanking lotus lanterns -->
+  <a-entity gltf-model="#lotuslan" position="-4 1.4 -52" scale="0.7 0.7 0.7"
+    animation="property: rotation; to: 0 360 0; dur: 8000; loop: true; easing: linear"></a-entity>
+  <a-entity gltf-model="#lotuslan" position="4 1.4 -52" scale="0.7 0.7 0.7"
+    animation="property: rotation; to: 0 -360 0; dur: 8000; loop: true; easing: linear"></a-entity>
 
-        particleGroups.forEach((group, index) => {
-          group.children.forEach((pt, i) => {
-            pt.position.y += 0.002 + 0.002 * index;
-            pt.position.x += Math.sin(timestamp * 0.0007 + i) * 0.0007;
-            if (pt.position.y > 2.8 + index * 0.5) pt.position.y = 0.2;
-          });
-        });
+  <!-- Lotus carpet in front of final shrine -->
+  <a-entity gltf-model="#lotus1" position="-1.5 1.4 -49" scale="0.35 0.35 0.35" animation="property: rotation; to: 0 360 0; dur: 7000; loop: true; easing: linear"></a-entity>
+  <a-entity gltf-model="#lotus2" position="0 1.4 -49" scale="0.35 0.35 0.35" animation="property: rotation; to: 0 -360 0; dur: 8000; loop: true; easing: linear"></a-entity>
+  <a-entity gltf-model="#lotus1" position="1.5 1.4 -49" scale="0.35 0.35 0.35" animation="property: rotation; to: 0 360 0; dur: 9000; loop: true; easing: linear"></a-entity>
 
-        renderer.render(scene, camera);
-      }
-    </script>
-  </body>
+  <!-- STAR PARTICLES (small glowing spheres scattered in sky) -->
+  <a-sphere position="5 15 -30"  radius="0.05" color="#ffffff" material="emissive:#ffffff; emissiveIntensity:1"></a-sphere>
+  <a-sphere position="-8 18 -35" radius="0.04" color="#ffffc0" material="emissive:#ffffc0; emissiveIntensity:1"></a-sphere>
+  <a-sphere position="12 20 -40" radius="0.05" color="#ffffff" material="emissive:#ffffff; emissiveIntensity:1"></a-sphere>
+  <a-sphere position="-12 22 -28" radius="0.04" color="#ffd0ff" material="emissive:#ffd0ff; emissiveIntensity:1"></a-sphere>
+  <a-sphere position="0 25 -45" radius="0.06" color="#ffffaa" material="emissive:#ffffaa; emissiveIntensity:1"></a-sphere>
+  <a-sphere position="-4 19 -50" radius="0.04" color="#ffffff" material="emissive:#ffffff; emissiveIntensity:1"></a-sphere>
+  <a-sphere position="9 16 -48"  radius="0.05" color="#c0e0ff" material="emissive:#c0e0ff; emissiveIntensity:1"></a-sphere>
+  <a-sphere position="-15 24 -42" radius="0.04" color="#ffffff" material="emissive:#ffffff; emissiveIntensity:1"></a-sphere>
+  <a-sphere position="16 21 -38" radius="0.05" color="#ffe0a0" material="emissive:#ffe0a0; emissiveIntensity:1"></a-sphere>
+  <a-sphere position="3 28 -55"  radius="0.07" color="#ffffcc" material="emissive:#ffffcc; emissiveIntensity:1"></a-sphere>
+
+</a-scene>
+
+<script>
+  var currentMode = 'ar';
+
+  function launchAR() {
+    document.getElementById('splash').style.display = 'none';
+    var scene = document.getElementById('main-scene');
+    scene.style.display = 'block';
+    document.getElementById('mode-bar').classList.add('visible');
+
+    var toast = document.getElementById('info-toast');
+    toast.classList.add('visible');
+    setTimeout(function() { toast.classList.remove('visible'); }, 4000);
+
+    buildStars();
+  }
+
+  function buildStars() {
+    var stars = document.getElementById('stars');
+    for (var i = 0; i < 200; i++) {
+      var s = document.createElement('a-sphere');
+      var x = (Math.random() - 0.5) * 120;
+      var y = 8 + Math.random() * 40;
+      var z = -10 - Math.random() * 80;
+      s.setAttribute('position', x + ' ' + y + ' ' + z);
+      var r = 0.03 + Math.random() * 0.04;
+      s.setAttribute('radius', r.toFixed(2));
+      s.setAttribute('color', '#ffffff');
+      s.setAttribute('material', 'emissive:#ffffff; emissiveIntensity:' + (0.5 + Math.random() * 0.5).toFixed(1));
+      stars.appendChild(s);
+    }
+  }
+
+  function setMode(mode) {
+    currentMode = mode;
+    document.querySelectorAll('.mode-btn').forEach(function(b) { b.classList.remove('active'); });
+
+    var scene = document.getElementById('main-scene');
+    var sky = document.getElementById('sky');
+    var cam = document.getElementById('cam');
+
+    if (mode === 'ar') {
+      document.getElementById('btn-ar').classList.add('active');
+      sky.setAttribute('color', '#0a0a1e');
+      scene.setAttribute('arjs', 'trackingMethod: best; sourceType: webcam; debugUIEnabled: false;');
+    } else if (mode === '3d') {
+      document.getElementById('btn-3d').classList.add('active');
+      sky.setAttribute('color', '#1a0a2e');
+      scene.removeAttribute('arjs');
+      cam.setAttribute('position', '0 1.6 2');
+    } else if (mode === 'night') {
+      document.getElementById('btn-night').classList.add('active');
+      sky.setAttribute('color', '#050510');
+    }
+  }
+</script>
+</body>
 </html>
