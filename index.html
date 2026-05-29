@@ -18,7 +18,6 @@
     <script type="module">
       import * as THREE from 'https://unpkg.com/three@0.150.1/build/three.module.js';
       import { ARButton } from 'https://unpkg.com/three@0.150.1/examples/jsm/webxr/ARButton.js';
-      import { GLTFLoader } from 'https://unpkg.com/three@0.150.1/examples/jsm/loaders/GLTFLoader.js';
 
       let camera, scene, renderer;
       let controller, reticle;
@@ -30,66 +29,6 @@
       const pathLights = [];
       const particleGroups = [];
       const forwardVector = new THREE.Vector3();
-      const loader = new GLTFLoader();
-      const modelCache = {};
-      const modelUrls = {
-        buddha: 'budha_statue.glb',
-        stoneBuddha: 'stone_buddha_statue.glb',
-        lotus1: 'lotus1.glb',
-        lotus2: 'lotus_flower2.glb',
-        lotusLantern: 'lotus_lanttern.glb',
-        vesakLantern: 'vesak_lanterns.glb',
-        sthupa: 'sthupa_srilanka.glb'
-      };
-
-      function loadGLTF(url) {
-        return new Promise((resolve, reject) => {
-          loader.load(url, resolve, undefined, reject);
-        });
-      }
-
-      function loadModels() {
-        Object.entries(modelUrls).forEach(([key, url]) => {
-          loadGLTF(url).then((gltf) => {
-            modelCache[key] = gltf.scene;
-            modelCache[key].scale.setScalar(0.9);
-          }).catch((err) => {
-            console.warn('Model load failed:', key, err);
-          });
-        });
-      }
-
-      function cloneModel(key, fallback) {
-        const source = modelCache[key];
-        if (source) {
-          const clone = source.clone(true);
-          clone.traverse((obj) => {
-            if (obj.isMesh) {
-              obj.castShadow = true;
-              obj.receiveShadow = true;
-            }
-          });
-          return clone;
-        }
-        return fallback ? fallback() : new THREE.Group();
-      }
-
-      function getLotusModel(size = 1) {
-        const key = Math.random() < 0.5 ? 'lotus1' : 'lotus2';
-        const lotus = cloneModel(key, () => createLotusFlower(size));
-        lotus.scale.multiplyScalar(size);
-        return lotus;
-      }
-
-      function getLotusLantern() {
-        return cloneModel('lotusLantern', () => createLantern());
-      }
-
-      function getVesakLantern() {
-        const lantern = cloneModel('vesakLantern', () => createSkyLantern());
-        lantern.scale.setScalar(0.9);
-        return lantern;
-      }
 
       init();
       animate();
@@ -127,24 +66,28 @@
         controller.addEventListener('select', onSelect);
         scene.add(controller);
 
-        document.body.appendChild(ARButton.createButton(renderer, { requiredFeatures: ['hit-test'], optionalFeatures: ['local-floor'] }));
-        loadModels();
+        try {
+          const arButton = ARButton.createButton(renderer, { requiredFeatures: ['hit-test'], optionalFeatures: ['local-floor'] });
+          document.body.appendChild(arButton);
+        } catch (err) {
+          console.warn('ARButton unavailable, using fallback view:', err);
+        }
 
         renderer.xr.addEventListener('sessionstart', () => {
           sessionStartTime = null;
         });
 
-        // Hide the loading screen once initialization completes.
-        setTimeout(() => {
+        function hideLoading() {
           const loadingEl = document.getElementById('loading');
           if (loadingEl) loadingEl.style.display = 'none';
-        }, 600);
+        }
 
-        // If AR does not start quickly, show the city preview in the normal view.
+        // Hide loading and build a preview even if AR does not start.
         setTimeout(() => {
           if (!world) {
             placeScene();
           }
+          hideLoading();
         }, 1000);
 
         window.addEventListener('resize', onWindowResize);
@@ -191,9 +134,8 @@
         addLotusPath(world, 10, 2.7, 1.2);
         addLotusPath(world, 10, 5.2, 1.2, 0.4);
         addLotusClusters(world);
-        addStupa(world, 0, 0, -6);
-        addBuddha(world, -4, 0, -6, 'buddha');
-        addBuddha(world, 4, 0, -6, 'stoneBuddha');
+        addTemple(world, 4, 0, -6);
+        addBuddha(world, -4, 0, -6);
         addPathLanterns(world);
         addGardenLights(world);
         addFlyingLanterns(world, 14);
@@ -209,7 +151,7 @@
         for (let i = 0; i < count; i++) {
           const z = -i * spacing - 1.2;
           const scale = 0.5 + Math.random() * 0.4;
-          const flower = getLotusModel(scale);
+          const flower = createLotusFlower(scale);
           flower.position.set(xOffset, 0.02, z + (Math.random() - 0.5) * 0.2);
           flower.rotation.y = Math.random() * Math.PI * 2;
           parent.add(flower);
@@ -233,35 +175,61 @@
         return group;
       }
 
-      function addStupa(parent, x, y, z) {
-        const stupa = cloneModel('sthupa', () => {
-          const placeholder = new THREE.Group();
-          const body = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 1.2, 2.4, 20), new THREE.MeshStandardMaterial({ color: 0xb5a58f, roughness: 0.7 }));
-          body.position.y = 1.2;
-          placeholder.add(body);
-          return placeholder;
-        });
-        stupa.position.set(x, y, z);
-        stupa.scale.setScalar(0.8);
-        parent.add(stupa);
+      function addTemple(parent, x, y, z) {
+        const temple = new THREE.Group();
+        temple.position.set(x, y, z);
+
+        const base = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.4, 2.8), new THREE.MeshStandardMaterial({ color: 0x7b4a20, roughness: 0.8 }));
+        base.position.y = 0.2;
+        temple.add(base);
+
+        const body = new THREE.Mesh(new THREE.BoxGeometry(1.8, 1.1, 2.2), new THREE.MeshStandardMaterial({ color: 0xe0c39a }));
+        body.position.y = 0.85;
+        temple.add(body);
+
+        const roof1 = new THREE.Mesh(new THREE.ConeGeometry(1.4, 0.7, 4), new THREE.MeshStandardMaterial({ color: 0x8b0000 }));
+        roof1.position.y = 1.7;
+        roof1.rotation.y = Math.PI / 4;
+        temple.add(roof1);
+
+        const roof2 = new THREE.Mesh(new THREE.ConeGeometry(1.1, 0.5, 4), new THREE.MeshStandardMaterial({ color: 0xaa0000 }));
+        roof2.position.y = 2.15;
+        roof2.rotation.y = Math.PI / 4;
+        temple.add(roof2);
+
+        const pillarMat = new THREE.MeshStandardMaterial({ color: 0xf0e0c0 });
+        for (let px of [-0.7, 0.7]) {
+          for (let pz of [-0.8, 0.8]) {
+            const pillar = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 1.2, 8), pillarMat);
+            pillar.position.set(px, 0.9, pz);
+            temple.add(pillar);
+          }
+        }
+
+        parent.add(temple);
       }
 
-      function addBuddha(parent, x, y, z, modelKey = 'buddha') {
-        const buddha = cloneModel(modelKey, () => {
-          const placeholder = new THREE.Group();
-          const base = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.9, 0.28, 16), new THREE.MeshStandardMaterial({ color: 0x6d4b3b }));
-          base.position.y = 0.14;
-          placeholder.add(base);
-          const body = new THREE.Mesh(new THREE.SphereGeometry(0.5, 16, 12), new THREE.MeshStandardMaterial({ color: 0xf3e5ab }));
-          body.position.y = 0.8;
-          placeholder.add(body);
-          const head = new THREE.Mesh(new THREE.SphereGeometry(0.28, 12, 10), new THREE.MeshStandardMaterial({ color: 0xf5e7c0 }));
-          head.position.y = 1.45;
-          placeholder.add(head);
-          return placeholder;
-        });
+      function addBuddha(parent, x, y, z) {
+        const buddha = new THREE.Group();
         buddha.position.set(x, y, z);
-        buddha.scale.setScalar(0.9);
+
+        const pedestal = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.9, 0.28, 16), new THREE.MeshStandardMaterial({ color: 0x6d4b3b }));
+        pedestal.position.y = 0.14;
+        buddha.add(pedestal);
+
+        const body = new THREE.Mesh(new THREE.SphereGeometry(0.5, 16, 12), new THREE.MeshStandardMaterial({ color: 0xf3e5ab }));
+        body.position.y = 0.8;
+        buddha.add(body);
+
+        const head = new THREE.Mesh(new THREE.SphereGeometry(0.28, 12, 10), new THREE.MeshStandardMaterial({ color: 0xf5e7c0 }));
+        head.position.y = 1.45;
+        buddha.add(head);
+
+        const halo = new THREE.Mesh(new THREE.RingGeometry(0.32, 0.42, 32), new THREE.MeshBasicMaterial({ color: 0xffdd66, side: THREE.DoubleSide }));
+        halo.position.y = 1.9;
+        halo.rotation.x = -0.2;
+        buddha.add(halo);
+
         parent.add(buddha);
       }
 
@@ -270,9 +238,8 @@
         let z = -2;
         for (let i = 0; i < 10; i++) {
           const side = lanternPositions[i % lanternPositions.length];
-          const lantern = getLotusLantern();
+          const lantern = createLantern();
           lantern.position.set(side, 0.5, z);
-          lantern.scale.setScalar(0.8);
           parent.add(lantern);
 
           const pole = new THREE.Mesh(
@@ -282,8 +249,7 @@
           pole.position.set(side, 1.1, z);
           parent.add(pole);
 
-          const light = lantern.children.find(obj => obj.type === 'PointLight');
-          pathLights.push({ light: light || new THREE.PointLight(0xffb060, 0.4, 3), phase: Math.random() * Math.PI * 2 });
+          pathLights.push({ light: lantern.children.find(obj => obj.type === 'PointLight'), phase: Math.random() * Math.PI * 2 });
           z -= 1.7;
         }
       }
@@ -308,7 +274,7 @@
 
       function addFlyingLanterns(parent, count) {
         for (let i = 0; i < count; i++) {
-          const lantern = getVesakLantern();
+          const lantern = createSkyLantern();
           lantern.position.set((Math.random() - 0.5) * 5, 0.6 + Math.random() * 0.4, -2 - Math.random() * 6);
           lantern.userData = {
             speed: 0.014 + Math.random() * 0.02,
@@ -386,7 +352,7 @@
           const count = 3 + Math.floor(Math.random() * 3);
           for (let i = 0; i < count; i++) {
             const angle = (i / count) * Math.PI * 2;
-            const petal = getLotusModel(0.4 + Math.random() * 0.3);
+            const petal = createLotusFlower(0.4 + Math.random() * 0.3);
             petal.position.set(Math.cos(angle) * 0.5, 0.02, Math.sin(angle) * 0.5);
             petal.rotation.y = Math.random() * Math.PI * 2;
             cluster.add(petal);
