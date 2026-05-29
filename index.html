@@ -41,26 +41,6 @@
         vesakLantern: 'vesak_lanterns.glb',
         sthupa: 'sthupa_srilanka.glb'
       };
-      let modelsLoaded = 0;
-      const totalModels = Object.keys(modelUrls).length;
-
-      function updateLoadingText(text) {
-        const loadingEl = document.getElementById('loading');
-        if (loadingEl) loadingEl.textContent = text;
-      }
-
-      function hideLoading() {
-        const loadingEl = document.getElementById('loading');
-        if (loadingEl) loadingEl.style.display = 'none';
-      }
-
-      function showPreviewIfNeeded() {
-        if (!world) {
-          placeScene();
-          updateLoadingText('Preview loaded. Models are still loading...');
-          setTimeout(hideLoading, 500);
-        }
-      }
 
       function loadGLTF(url) {
         return new Promise((resolve, reject) => {
@@ -78,20 +58,8 @@
                 obj.receiveShadow = true;
               }
             });
-            modelsLoaded += 1;
-            updateLoadingText(`Loaded ${modelsLoaded} / ${totalModels} models`);
-            if (modelsLoaded === totalModels) {
-              updateLoadingText('All models loaded.');
-              hideLoading();
-            }
           }).catch((err) => {
-            modelsLoaded += 1;
             console.warn('Model load failed:', key, err);
-            updateLoadingText(`Loaded ${modelsLoaded} / ${totalModels} models (some failed)`);
-            if (modelsLoaded === totalModels) {
-              updateLoadingText('Model loading complete.');
-              hideLoading();
-            }
           });
         });
       }
@@ -177,10 +145,18 @@
           sessionStartTime = null;
         });
 
-        // Show a quick preview while models are loading.
+        function hideLoading() {
+          const loadingEl = document.getElementById('loading');
+          if (loadingEl) loadingEl.style.display = 'none';
+        }
+
+        // Hide loading and build a preview even if AR does not start.
         setTimeout(() => {
-          showPreviewIfNeeded();
-        }, 500);
+          if (!world) {
+            placeScene();
+          }
+          hideLoading();
+        }, 1000);
 
         window.addEventListener('resize', onWindowResize);
         window.addEventListener('orientationchange', onWindowResize);
